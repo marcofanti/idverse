@@ -94,6 +94,7 @@ public class IdVerificationService {
             String response = webClient.post()
                     .uri(idverseApiUrl)
                     .header("Authorization", "Bearer " + accessToken)
+                    .header("accept", "application/json")
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
