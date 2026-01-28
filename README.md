@@ -4,11 +4,13 @@ A Spring Boot web application that integrates with the IDVerse API to perform ph
 
 ## Features
 
-- OAuth 2.0 client credentials authentication with automatic token caching and renewal
+- OAuth 2.0 client credentials authentication with automatic token caching (800 seconds)
 - REST API endpoints for programmatic access
 - Web UI for manual verification requests
 - H2 in-memory database for storing verification history
-- Automatic token management (tokens are cached and renewed before expiration)
+- Mock OAuth endpoint for testing without external API
+- SECRET verbose mode for debugging with full request details
+- HTML response detection to prevent error pages from being treated as success
 
 ## Prerequisites
 
@@ -23,13 +25,29 @@ A Spring Boot web application that integrates with the IDVerse API to perform ph
 Create a `.env` file in the project root directory with your IDVerse API credentials:
 
 ```bash
+# Required: IDVerse API Credentials
 IDVERSE_CLIENT_ID=your_actual_client_id
 IDVERSE_CLIENT_SECRET=your_actual_client_secret
 IDVERSE_OAUTH_URL=https://usdemo.idkit.co/api/3.5/oauthToken
 IDVERSE_API_URL=https://usdemo.idkit.co/api/3.5/sendSms
+
+# Optional: Logging Level (DEBUG, INFO, WARN, ERROR, or SECRET)
+VERBOSE=DEBUG
+
+# Optional: Mock OAuth Token (for testing with mock endpoint)
+OAUTHTOKEN=your_test_token_here
 ```
 
 **Note:** The `.env` file is already in `.gitignore` to prevent accidentally committing credentials.
+
+#### Verbose Modes
+
+- **DEBUG** (default): Detailed logging with sensitive data masked (e.g., `client_secret: abc****xyz`)
+- **INFO**: Standard application logging
+- **SECRET**: Complete POST requests written to **console only** (System.out) with all keys unmasked
+  - Includes full `client_secret`, `access_token`, and all request parameters
+  - Use for debugging authentication issues
+  - **WARNING**: Sensitive data is NOT masked in this mode
 
 ### 2. Build the application
 
@@ -44,6 +62,51 @@ mvn spring-boot:run
 ```
 
 The application will start on port **19746** (configurable in `application.yml`).
+
+## OAuth Token Caching
+
+The application automatically caches OAuth tokens for **800 seconds** (13.3 minutes) to reduce API calls:
+
+- First request: Token is fetched from the OAuth server
+- Subsequent requests: Cached token is reused until expiration
+- After 800 seconds: New token is automatically fetched
+- Token caching is thread-safe and works across all API requests
+
+**Benefits:**
+- Reduces load on OAuth server
+- Improves response time for verification requests
+- Automatic renewal when token expires
+
+**Manual token management:**
+```bash
+# Clear cached token (forces refresh on next request)
+curl -X POST http://localhost:19746/test/clear-token
+```
+
+## Mock OAuth Endpoint
+
+For testing without calling the real OAuth server, use the built-in mock endpoint:
+
+**1. Set mock token in `.env`:**
+```bash
+OAUTHTOKEN=eyJ0eXAiOiJKV1QiLCJhbGciOi...your_test_token
+```
+
+**2. Call the mock endpoint:**
+```bash
+curl -X POST http://localhost:19746/api/3.5/oauthToken
+```
+
+**Response:**
+```json
+{
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOi...your_test_token"
+}
+```
+
+This endpoint mimics the real IDVerse OAuth server response format.
 
 ## Testing
 
