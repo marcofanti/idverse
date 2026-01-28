@@ -84,6 +84,21 @@ public class ApiConfig {
     }
 
     @Bean
+    public String oauthToken() {
+        String token = dotenv.get("OAUTHTOKEN");
+        if (token == null || token.isEmpty()) {
+            log.warn("OAUTHTOKEN not configured in .env file");
+            return null;
+        }
+        return token;
+    }
+
+    @Bean
+    public String verboseMode() {
+        return dotenv.get("VERBOSE");
+    }
+
+    @Bean
     public WebClient webClient() {
         return WebClient.builder()
                 .defaultHeader("Content-Type", "application/json")

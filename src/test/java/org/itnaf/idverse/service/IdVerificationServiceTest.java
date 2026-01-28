@@ -42,7 +42,8 @@ class IdVerificationServiceTest {
             verificationRepository,
             webClient,
             oAuthTokenService,
-            baseUrl + "api/verify"
+            baseUrl + "api/verify",
+            "DEBUG"  // verboseMode - use DEBUG for tests, not SECRET
         );
 
         // Mock OAuth token service to return a test token

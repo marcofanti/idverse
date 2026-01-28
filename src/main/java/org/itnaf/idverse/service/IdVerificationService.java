@@ -25,6 +25,7 @@ public class IdVerificationService {
     private final WebClient webClient;
     private final OAuthTokenService oAuthTokenService;
     private final String idverseApiUrl;
+    private final String verboseMode;
 
     public VerificationResponse verify(VerificationRequest request) {
         log.info("=== Starting Verification Process ===");
@@ -81,15 +82,31 @@ public class IdVerificationService {
             );
 
             log.debug("Step 2: Preparing API request");
-            log.debug("API URL: {}", idverseApiUrl);
-            log.debug("HTTP Method: POST");
-            log.debug("Request Headers:");
-            log.debug("  - Content-Type: application/json");
-            log.debug("  - Accept: application/json");
-            log.debug("  - Authorization: Bearer {}", maskedToken);
-            log.debug("Request Body:");
-            log.debug("  - phoneNumber: {}", request.getPhoneNumber());
-            log.debug("  - referenceId: {}", request.getReferenceId());
+
+            // If VERBOSE=SECRET, log complete POST request with all keys to console
+            if ("SECRET".equalsIgnoreCase(verboseMode)) {
+                System.out.println("=== COMPLETE POST REQUEST (SECRET MODE) ===");
+                System.out.println("URL: " + idverseApiUrl);
+                System.out.println("Method: POST");
+                System.out.println("Request Headers:");
+                System.out.println("  Content-Type: application/json");
+                System.out.println("  Accept: application/json");
+                System.out.println("  Authorization: Bearer " + accessToken);
+                System.out.println("Request Body:");
+                System.out.println("  phoneNumber: " + request.getPhoneNumber());
+                System.out.println("  referenceId: " + request.getReferenceId());
+                System.out.println("===========================================");
+            } else {
+                log.debug("API URL: {}", idverseApiUrl);
+                log.debug("HTTP Method: POST");
+                log.debug("Request Headers:");
+                log.debug("  - Content-Type: application/json");
+                log.debug("  - Accept: application/json");
+                log.debug("  - Authorization: Bearer {}", maskedToken);
+                log.debug("Request Body:");
+                log.debug("  - phoneNumber: {}", request.getPhoneNumber());
+                log.debug("  - referenceId: {}", request.getReferenceId());
+            }
 
             log.debug("Step 3: Sending HTTP request to IDVerse API...");
             String response = webClient.post()

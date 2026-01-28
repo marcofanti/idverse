@@ -25,6 +25,7 @@ public class OAuthTokenService {
     private final String idverseClientId;
     private final String idverseClientSecret;
     private final String idverseOAuthUrl;
+    private final String verboseMode;
 
     private String cachedAccessToken;
     private Instant tokenExpiryTime;
@@ -55,13 +56,13 @@ public class OAuthTokenService {
             return false;
         }
 
-        // Renew token if it expires in less than 60 seconds
+        // Token is valid if it hasn't expired yet
         Instant now = Instant.now();
-        boolean valid = now.plusSeconds(60).isBefore(tokenExpiryTime);
+        boolean valid = now.isBefore(tokenExpiryTime);
 
         if (!valid) {
             long secondsUntilExpiry = Duration.between(now, tokenExpiryTime).getSeconds();
-            log.debug("Token validation: Token expires in {} seconds (renewal threshold: 60s)", secondsUntilExpiry);
+            log.debug("Token validation: Token expired {} seconds ago", Math.abs(secondsUntilExpiry));
         }
 
         return valid;
@@ -71,13 +72,27 @@ public class OAuthTokenService {
         try {
             log.debug("=== Fetching OAuth Token ===");
             log.debug("OAuth URL: {}", idverseOAuthUrl);
-            log.debug("Client ID: {}", idverseClientId);
-            log.debug("Client Secret: {}", maskSecret(idverseClientSecret));
 
             MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
             formData.add("grant_type", "client_credentials");
             formData.add("client_id", idverseClientId);
             formData.add("client_secret", idverseClientSecret);
+
+            // If VERBOSE=SECRET, log complete POST request with all keys
+            if ("SECRET".equalsIgnoreCase(verboseMode)) {
+                System.out.println("=== COMPLETE POST REQUEST (SECRET MODE) ===");
+                System.out.println("URL: " + idverseOAuthUrl);
+                System.out.println("Method: POST");
+                System.out.println("Content-Type: application/x-www-form-urlencoded");
+                System.out.println("Request Parameters:");
+                System.out.println("  grant_type: " + formData.getFirst("grant_type"));
+                System.out.println("  client_id: " + idverseClientId);
+                System.out.println("  client_secret: " + idverseClientSecret);
+                System.out.println("===========================================");
+            } else {
+                log.debug("Client ID: {}", idverseClientId);
+                log.debug("Client Secret: {}", maskSecret(idverseClientSecret));
+            }
 
             log.debug("Sending POST request to OAuth endpoint...");
             OAuthTokenResponse response = webClient.post()
@@ -117,13 +132,14 @@ public class OAuthTokenService {
             }
 
             cachedAccessToken = response.getAccessToken();
-            int expiresIn = response.getExpiresIn() != null ? response.getExpiresIn() : 900;
+            // Cache token for 800 seconds as per configuration
+            int expiresIn = 800;
             tokenExpiryTime = Instant.now().plusSeconds(expiresIn);
 
             String maskedToken = cachedAccessToken.substring(0, Math.min(20, cachedAccessToken.length())) + "...";
             log.info("✓ Successfully obtained access token");
             log.info("Token Type: {}", response.getTokenType());
-            log.info("Expires In: {} seconds ({} minutes)", expiresIn, expiresIn / 60);
+            log.info("Token cached for: {} seconds ({} minutes)", expiresIn, expiresIn / 60);
             log.info("Token Expiry Time: {}", tokenExpiryTime);
             log.debug("Token Preview: {}", maskedToken);
             log.debug("===========================");
