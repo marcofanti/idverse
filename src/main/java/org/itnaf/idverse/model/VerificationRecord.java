@@ -26,6 +26,9 @@ public class VerificationRecord {
     @Column(nullable = false)
     private String referenceId;
 
+    @Column(nullable = false)
+    private String transactionId;
+
     @Column(columnDefinition = "TEXT")
     private String apiResponse;
 

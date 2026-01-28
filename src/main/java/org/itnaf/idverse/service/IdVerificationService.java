@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -31,11 +32,16 @@ public class IdVerificationService {
         log.info("=== Starting Verification Process ===");
         log.info("Phone Number: {}", request.getPhoneNumber());
         log.info("Reference ID: {}", request.getReferenceId());
+
+        // Ensure transactionId is set (generate if empty/null)
+        ensureTransactionId(request);
+        log.info("Transaction ID: {}", request.getTransactionId());
         log.debug("Request Object: {}", request);
 
         VerificationRecord record = VerificationRecord.builder()
                 .phoneNumber(request.getPhoneNumber())
                 .referenceId(request.getReferenceId())
+                .transactionId(request.getTransactionId())
                 .build();
 
         try {
@@ -78,7 +84,8 @@ public class IdVerificationService {
             // Prepare request body
             Map<String, String> requestBody = Map.of(
                     "phoneNumber", request.getPhoneNumber(),
-                    "referenceId", request.getReferenceId()
+                    "referenceId", request.getReferenceId(),
+                    "transactionId", request.getTransactionId()
             );
 
             log.debug("Step 2: Preparing API request");
@@ -95,6 +102,7 @@ public class IdVerificationService {
                 System.out.println("Request Body:");
                 System.out.println("  phoneNumber: " + request.getPhoneNumber());
                 System.out.println("  referenceId: " + request.getReferenceId());
+                System.out.println("  transactionId: " + request.getTransactionId());
                 System.out.println("===========================================");
             } else {
                 log.debug("API URL: {}", idverseApiUrl);
@@ -106,6 +114,7 @@ public class IdVerificationService {
                 log.debug("Request Body:");
                 log.debug("  - phoneNumber: {}", request.getPhoneNumber());
                 log.debug("  - referenceId: {}", request.getReferenceId());
+                log.debug("  - transactionId: {}", request.getTransactionId());
             }
 
             log.debug("Step 3: Sending HTTP request to IDVerse API...");
@@ -176,10 +185,48 @@ public class IdVerificationService {
                 .id(record.getId())
                 .phoneNumber(record.getPhoneNumber())
                 .referenceId(record.getReferenceId())
+                .transactionId(record.getTransactionId())
                 .apiResponse(record.getApiResponse())
                 .status(record.getStatus())
                 .timestamp(record.getTimestamp())
                 .errorMessage(record.getErrorMessage())
                 .build();
+    }
+
+    /**
+     * Ensures that the request has a valid transactionId.
+     * If the transactionId is null or empty, generates a random one.
+     * Generated IDs are 20 characters long and contain alphanumeric characters and hyphens.
+     */
+    private void ensureTransactionId(VerificationRequest request) {
+        if (request.getTransactionId() == null || request.getTransactionId().trim().isEmpty()) {
+            String generatedId = generateTransactionId();
+            request.setTransactionId(generatedId);
+            log.debug("Generated transaction ID: {}", generatedId);
+        }
+    }
+
+    /**
+     * Generates a random transaction ID.
+     * Format: txn-{timestamp}-{random} (e.g., txn-1706471234567-a3f9b2)
+     * Length: 26 characters (guaranteed to be between 10 and 128)
+     */
+    private String generateTransactionId() {
+        long timestamp = System.currentTimeMillis();
+        String randomPart = generateRandomAlphanumeric(6);
+        return String.format("txn-%d-%s", timestamp, randomPart);
+    }
+
+    /**
+     * Generates a random alphanumeric string of specified length.
+     */
+    private String generateRandomAlphanumeric(int length) {
+        String chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 }

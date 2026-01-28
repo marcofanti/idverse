@@ -47,6 +47,20 @@
                                 </div>
                             </div>
 
+                            <div class="mb-3">
+                                <label for="transactionId" class="form-label">Transaction ID <span class="text-muted">(Optional)</span></label>
+                                <input type="text"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('transactionId')} ? 'is-invalid' : ''"
+                                       id="transactionId"
+                                       th:field="*{transactionId}"
+                                       placeholder="txn-12345-abc">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('transactionId')}" th:errors="*{transactionId}">
+                                    Transaction ID error
+                                </div>
+                                <small class="form-text text-muted">10-128 characters. Alphanumeric, spaces, hyphens, and underscores only. Auto-generated if left empty.</small>
+                            </div>
+
                             <button type="submit" class="btn btn-primary w-100">Verify</button>
                         </form>
                     </div>
@@ -64,6 +78,7 @@
                                         <th>ID</th>
                                         <th>Phone Number</th>
                                         <th>Reference ID</th>
+                                        <th>Transaction ID</th>
                                         <th>Status</th>
                                         <th>Timestamp</th>
                                     </tr>
@@ -73,6 +88,7 @@
                                         <td th:text="${verification.id}">1</td>
                                         <td th:text="${verification.phoneNumber}">+1234567890</td>
                                         <td th:text="${verification.referenceId}">REF123</td>
+                                        <td th:text="${verification.transactionId}">txn-12345</td>
                                         <td>
                                             <span th:if="${verification.status == 'SUCCESS'}" class="badge bg-success" th:text="${verification.status}">SUCCESS</span>
                                             <span th:if="${verification.status == 'FAILURE'}" class="badge bg-danger" th:text="${verification.status}">FAILURE</span>

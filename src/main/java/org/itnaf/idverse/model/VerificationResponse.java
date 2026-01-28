@@ -16,6 +16,7 @@ public class VerificationResponse {
     private Long id;
     private String phoneNumber;
     private String referenceId;
+    private String transactionId;
     private String apiResponse;
     private String status;
     private LocalDateTime timestamp;

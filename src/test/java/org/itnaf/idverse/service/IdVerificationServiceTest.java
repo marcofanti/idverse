@@ -202,4 +202,95 @@ class IdVerificationServiceTest {
             idVerificationService.verify(request);
         });
     }
+
+    @Test
+    void verify_shouldGenerateTransactionIdWhenNotProvided() throws Exception {
+        // Given - No transactionId provided
+        mockWebServer.enqueue(new MockResponse()
+            .setResponseCode(200)
+            .setBody("{\"status\":\"success\",\"transactionId\":\"txn-123\"}")
+            .addHeader("Content-Type", "application/json"));
+
+        VerificationRequest request = new VerificationRequest();
+        request.setPhoneNumber("+19412607454");
+        request.setReferenceId("test-ref-123");
+        // transactionId is null
+
+        // Mock repository save
+        when(verificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        VerificationResponse response = idVerificationService.verify(request);
+
+        // Then
+        assertNotNull(response.getTransactionId(), "Transaction ID should be auto-generated");
+        assertTrue(response.getTransactionId().startsWith("txn-"),
+            "Generated transaction ID should start with 'txn-'");
+        assertTrue(response.getTransactionId().length() >= 10,
+            "Generated transaction ID should be at least 10 characters");
+        assertTrue(response.getTransactionId().length() <= 128,
+            "Generated transaction ID should not exceed 128 characters");
+
+        // Verify it was sent to the API
+        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        String body = recordedRequest.getBody().readUtf8();
+        assertTrue(body.contains("transactionId"), "API request should include transactionId");
+    }
+
+    @Test
+    void verify_shouldUseProvidedTransactionId() throws Exception {
+        // Given - TransactionId is provided
+        mockWebServer.enqueue(new MockResponse()
+            .setResponseCode(200)
+            .setBody("{\"status\":\"success\"}")
+            .addHeader("Content-Type", "application/json"));
+
+        String customTransactionId = "my-custom-txn-id-12345";
+        VerificationRequest request = new VerificationRequest();
+        request.setPhoneNumber("+19412607454");
+        request.setReferenceId("test-ref-123");
+        request.setTransactionId(customTransactionId);
+
+        // Mock repository save
+        when(verificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        VerificationResponse response = idVerificationService.verify(request);
+
+        // Then
+        assertEquals(customTransactionId, response.getTransactionId(),
+            "Should use the provided transaction ID");
+
+        // Verify it was sent to the API
+        RecordedRequest recordedRequest = mockWebServer.takeRequest();
+        String body = recordedRequest.getBody().readUtf8();
+        assertTrue(body.contains(customTransactionId), "API request should include the custom transactionId");
+    }
+
+    @Test
+    void verify_shouldGenerateTransactionIdWhenEmpty() throws Exception {
+        // Given - Empty transactionId provided
+        mockWebServer.enqueue(new MockResponse()
+            .setResponseCode(200)
+            .setBody("{\"status\":\"success\"}")
+            .addHeader("Content-Type", "application/json"));
+
+        VerificationRequest request = new VerificationRequest();
+        request.setPhoneNumber("+19412607454");
+        request.setReferenceId("test-ref-123");
+        request.setTransactionId("   "); // Empty/whitespace only
+
+        // Mock repository save
+        when(verificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        VerificationResponse response = idVerificationService.verify(request);
+
+        // Then
+        assertNotNull(response.getTransactionId(), "Transaction ID should be auto-generated when empty");
+        assertTrue(response.getTransactionId().startsWith("txn-"),
+            "Generated transaction ID should start with 'txn-'");
+        assertNotEquals("   ", response.getTransactionId().trim(),
+            "Should replace empty string with generated ID");
+    }
 }

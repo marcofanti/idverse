@@ -2,6 +2,7 @@ package org.itnaf.idverse.model;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,4 +18,9 @@ public class VerificationRequest {
 
     @NotBlank(message = "Reference ID is required")
     private String referenceId;
+
+    // Optional in form, but required in API (will be auto-generated if empty)
+    @Size(min = 10, max = 128, message = "Transaction ID must be between 10 and 128 characters")
+    @Pattern(regexp = "^[a-zA-Z0-9\\s_-]*$", message = "Transaction ID can only contain alphanumeric characters, spaces, hyphens, and underscores")
+    private String transactionId;
 }
