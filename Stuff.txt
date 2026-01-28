@@ -1,0 +1,14 @@
+OkHttpClient client = new OkHttpClient();
+
+MediaType mediaType = MediaType.parse("multipart/form-data; boundary=---011000010111000001101001");
+RequestBody body = RequestBody.create(mediaType, "-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"transactionId\"\r\n\r\n23123-jjhjhjh1_\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"phoneCode\"\r\n\r\n+1\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"phoneNumber\"\r\n\r\n9547017082\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"name\"\r\n\r\nMarco2\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"reference\"\r\n\r\ndsf444dsfdsf\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"suppliedFirstName\"\r\n\r\ndsfsfs\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"suppliedMiddleName\"\r\n\r\nsdfdf\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"suppliedLastName\"\r\n\r\nsddfdf\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"suppliedFullName\"\r\n\r\nsdfdfdf\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"suppliedBirthDate\"\r\n\r\n12/02/2000\r\n-----011000010111000001101001\r\nContent-Disposition: form-data; name=\"suppliedAddress\"\r\n\r\n23123\r\n-----011000010111000001101001--");
+Request request = new Request.Builder()
+  .url("https://us.demo.idkit.co/api/3.5/sendSms")
+  .post(body)
+  .addHeader("accept", "application/json")
+  .addHeader("content-type", "multipart/form-data; boundary=---011000010111000001101001")
+  .addHeader("authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjRhNDg4MmQwOTRiZWQxNzExMWM5ODQxNjcwY2MyMTI0MDEwOGM0ZjhlYzlhNzcxZDNjY2I2MjYwMTA3OWMwZmJjY2U4ZjlmYzcxZDEzMDFkIn0.eyJhdWQiOiIyNzY2Njk0NzIxIiwianRpIjoiNGE0ODgyZDA5NGJlZDE3MTExYzk4NDE2NzBjYzIxMjQwMTA4YzRmOGVjOWE3NzFkM2NjYjYyNjAxMDc5YzBmYmNjZThmOWZjNzFkMTMwMWQiLCJpYXQiOjE3Njk2Mjk5MjIsIm5iZiI6MTc2OTYyOTkyMiwiZXhwIjoxNzY5NjMwODIyLCJzdWIiOiIiLCJzY29wZXMiOltdfQ.nUDRAW5gWSiL6joa7v1DvPHH5ca21a0-fcTA72I-NmsH0Zqk1TL9Usplssy9K9mnX5JGgrhm6WIrG8lUw5KGOVXeStZ-8fWQdjj_85EWFX7AuYs_mqu5LtKqKbY1p4zoMZJqWCOuqvP9zo2UjPQC4aoPYFIwWHnvlfTTVkZQvHyir7gs9d-eNONFWGEQg3kRixjC1FK95H1oVCU4NUG1ACxPyzXyj3OoRoPvV2DZkSzvhDEKskYvX0s7OwU752WYgKJYg6SZRUDVUyYQxgr6MX7g2iRtBKsALNAVYZORFZQDu1VM_zwHFk4nNJvRI0ephvEdULKV5Ml4SxxArUC0Bw")
+  .build();
+
+Response response = client.newCall(request).execute();
+
