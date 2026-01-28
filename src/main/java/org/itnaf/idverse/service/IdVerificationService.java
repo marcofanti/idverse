@@ -85,6 +85,7 @@ public class IdVerificationService {
             log.debug("HTTP Method: POST");
             log.debug("Request Headers:");
             log.debug("  - Content-Type: application/json");
+            log.debug("  - Accept: application/json");
             log.debug("  - Authorization: Bearer {}", maskedToken);
             log.debug("Request Body:");
             log.debug("  - phoneNumber: {}", request.getPhoneNumber());
@@ -103,6 +104,16 @@ public class IdVerificationService {
 
             log.debug("✓ Received response from IDVerse API");
             log.debug("Response body: {}", response);
+
+            // Validate that response is JSON, not HTML error page
+            if (response != null && response.trim().startsWith("<!DOCTYPE") ||
+                (response != null && response.trim().startsWith("<html"))) {
+                log.error("✗ API returned HTML instead of JSON - this indicates an error");
+                log.error("HTML Response: {}", response.substring(0, Math.min(200, response.length())));
+                log.error("=== API Call Failed ===");
+                throw new RuntimeException("API returned HTML error page instead of JSON response");
+            }
+
             log.debug("=== API Call Complete ===");
 
             return response != null ? response : "{}";
@@ -115,6 +126,13 @@ public class IdVerificationService {
             log.error("Response Body: {}", e.getResponseBodyAsString());
             log.error("========================");
             throw new RuntimeException("API call failed with status " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+        } catch (RuntimeException e) {
+            // Re-throw our own RuntimeExceptions (like HTML validation error) without wrapping
+            log.error("=== Unexpected Error During API Call ===");
+            log.error("Exception Type: {}", e.getClass().getName());
+            log.error("Error Message: {}", e.getMessage());
+            log.error("=======================================", e);
+            throw e;
         } catch (Exception e) {
             log.error("=== Unexpected Error During API Call ===");
             log.error("Exception Type: {}", e.getClass().getName());
