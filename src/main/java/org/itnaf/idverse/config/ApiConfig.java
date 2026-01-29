@@ -106,15 +106,16 @@ public class ApiConfig {
     public String oauthToken() {
         String token = dotenv.get("OAUTHTOKEN");
         if (token == null || token.isEmpty()) {
-            log.warn("OAUTHTOKEN not configured in .env file");
-            return null;
+            log.warn("OAUTHTOKEN not configured - mock OAuth endpoint will return error");
+            return ""; // Return empty string instead of null to allow bean creation
         }
         return token;
     }
 
     @Bean
     public String verboseMode() {
-        return dotenv.get("VERBOSE");
+        String verbose = dotenv.get("VERBOSE");
+        return verbose != null ? verbose : "INFO"; // Default to INFO if not set
     }
 
     @Bean
