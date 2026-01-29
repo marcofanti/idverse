@@ -43,6 +43,19 @@ public class ApiConfig {
         rootLogger.setLevel(logLevel);
 
         log.info("Application log level set to: {}", logLevel);
+
+        // Set default values as system properties for @Value injection
+        setSystemPropertyIfPresent("default.phone.code", dotenv.get("PHONE_CODE"));
+        setSystemPropertyIfPresent("default.phone.number", dotenv.get("PHONE_NUMBER"));
+        setSystemPropertyIfPresent("default.transaction", dotenv.get("TRANSACTION"));
+        setSystemPropertyIfPresent("default.name", dotenv.get("NAME"));
+        setSystemPropertyIfPresent("default.supplied.first.name", dotenv.get("SUPPLIED_FIRST_NAME"));
+    }
+
+    private void setSystemPropertyIfPresent(String key, String value) {
+        if (value != null && !value.isEmpty()) {
+            System.setProperty(key, value);
+        }
     }
 
     @Bean
@@ -96,31 +109,6 @@ public class ApiConfig {
     @Bean
     public String verboseMode() {
         return dotenv.get("VERBOSE");
-    }
-
-    @Bean
-    public String defaultPhoneCode() {
-        return dotenv.get("PHONE_CODE");
-    }
-
-    @Bean
-    public String defaultPhoneNumber() {
-        return dotenv.get("PHONE_NUMBER");
-    }
-
-    @Bean
-    public String defaultTransaction() {
-        return dotenv.get("TRANSACTION");
-    }
-
-    @Bean
-    public String defaultName() {
-        return dotenv.get("NAME");
-    }
-
-    @Bean
-    public String defaultSuppliedFirstName() {
-        return dotenv.get("SUPPLIED_FIRST_NAME");
     }
 
     @Bean

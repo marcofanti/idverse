@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.itnaf.idverse.model.VerificationRequest;
 import org.itnaf.idverse.model.VerificationResponse;
 import org.itnaf.idverse.service.IdVerificationService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -17,16 +18,29 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @Controller
-@RequiredArgsConstructor
 @Slf4j
 public class WebController {
 
     private final IdVerificationService verificationService;
-    private final String defaultPhoneCode;
-    private final String defaultPhoneNumber;
-    private final String defaultTransaction;
-    private final String defaultName;
-    private final String defaultSuppliedFirstName;
+
+    @Value("${default.phone.code:#{null}}")
+    private String defaultPhoneCode;
+
+    @Value("${default.phone.number:#{null}}")
+    private String defaultPhoneNumber;
+
+    @Value("${default.transaction:#{null}}")
+    private String defaultTransaction;
+
+    @Value("${default.name:#{null}}")
+    private String defaultName;
+
+    @Value("${default.supplied.first.name:#{null}}")
+    private String defaultSuppliedFirstName;
+
+    public WebController(IdVerificationService verificationService) {
+        this.verificationService = verificationService;
+    }
 
     @GetMapping("/")
     public String home(Model model) {
