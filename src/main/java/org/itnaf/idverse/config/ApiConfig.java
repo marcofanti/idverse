@@ -119,6 +119,36 @@ public class ApiConfig {
     }
 
     @Bean
+    public String notifyUrlComplete() {
+        String url = dotenv.get("NOTIFY_URL_COMPLETE");
+        if (url == null || url.isEmpty()) {
+            log.warn("NOTIFY_URL_COMPLETE not configured - webhook notifications will not be sent");
+            return "";
+        }
+        return url;
+    }
+
+    @Bean
+    public String notifyUrlEvent() {
+        String url = dotenv.get("NOTIFY_URL_EVENT");
+        if (url == null || url.isEmpty()) {
+            log.warn("NOTIFY_URL_EVENT not configured - webhook notifications will not be sent");
+            return "";
+        }
+        return url;
+    }
+
+    @Bean
+    public String jwtSecretKey() {
+        String secret = dotenv.get("JWT_SECRET_KEY");
+        if (secret == null || secret.isEmpty()) {
+            log.warn("JWT_SECRET_KEY not configured - using default (INSECURE for production)");
+            return "idverse-default-secret-key-change-in-production";
+        }
+        return secret;
+    }
+
+    @Bean
     public WebClient webClient() {
         return WebClient.builder()
                 .defaultHeader("Content-Type", "application/json")

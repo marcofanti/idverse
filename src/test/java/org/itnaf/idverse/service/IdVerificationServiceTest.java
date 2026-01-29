@@ -30,6 +30,9 @@ class IdVerificationServiceTest {
     @Mock
     private OAuthTokenService oAuthTokenService;
 
+    @Mock
+    private JwtService jwtService;
+
     @BeforeEach
     void setUp() throws Exception {
         mockWebServer = new MockWebServer();
@@ -42,12 +45,19 @@ class IdVerificationServiceTest {
             verificationRepository,
             webClient,
             oAuthTokenService,
+            jwtService,
             baseUrl + "api/verify",
-            "DEBUG"  // verboseMode - use DEBUG for tests, not SECRET
+            "DEBUG",  // verboseMode - use DEBUG for tests, not SECRET
+            "http://localhost:8080/api/webhook",  // notifyUrlComplete
+            "http://localhost:8080/api/webhook"   // notifyUrlEvent
         );
 
         // Mock OAuth token service to return a test token
         when(oAuthTokenService.getAccessToken()).thenReturn("test-access-token");
+
+        // Mock JWT service to return test tokens
+        when(jwtService.generateToken("webhook-complete")).thenReturn("test-jwt-token-complete");
+        when(jwtService.generateToken("webhook-event")).thenReturn("test-jwt-token-event");
     }
 
     @AfterEach

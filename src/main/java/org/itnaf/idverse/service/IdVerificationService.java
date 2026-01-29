@@ -25,8 +25,11 @@ public class IdVerificationService {
     private final VerificationRepository verificationRepository;
     private final WebClient webClient;
     private final OAuthTokenService oAuthTokenService;
+    private final JwtService jwtService;
     private final String idverseApiUrl;
     private final String verboseMode;
+    private final String notifyUrlComplete;
+    private final String notifyUrlEvent;
 
     public VerificationResponse verify(VerificationRequest request) {
         log.info("=== Starting Verification Process ===");
@@ -101,6 +104,25 @@ public class IdVerificationService {
                 requestBody.put("suppliedFirstName", request.getSuppliedFirstName());
             }
 
+            // Add webhook notification URLs and authentication parameters
+            if (notifyUrlComplete != null && !notifyUrlComplete.isEmpty()) {
+                requestBody.put("notifyUrlComplete", notifyUrlComplete);
+                // Generate JWT token for completion webhook
+                String completeToken = jwtService.generateToken("webhook-complete");
+                requestBody.put("notifyUrlCompleteAuthKey", "Bearer " + completeToken);
+                requestBody.put("notifyUrlCompleteAuthHeaderName", "Authorization");
+                log.debug("Added completion webhook URL: {}", notifyUrlComplete);
+            }
+
+            if (notifyUrlEvent != null && !notifyUrlEvent.isEmpty()) {
+                requestBody.put("notifyUrlEvent", notifyUrlEvent);
+                // Generate JWT token for event webhook
+                String eventToken = jwtService.generateToken("webhook-event");
+                requestBody.put("notifyUrlEventAuthKey", "Bearer " + eventToken);
+                requestBody.put("notifyUrlEventAuthHeaderName", "Authorization");
+                log.debug("Added event webhook URL: {}", notifyUrlEvent);
+            }
+
             log.debug("Step 2: Preparing API request");
 
             // If VERBOSE=SECRET, log complete POST request with all keys to console
@@ -119,6 +141,16 @@ public class IdVerificationService {
                 System.out.println("  transactionId: " + request.getTransactionId());
                 if (request.getName() != null) System.out.println("  name: " + request.getName());
                 if (request.getSuppliedFirstName() != null) System.out.println("  suppliedFirstName: " + request.getSuppliedFirstName());
+                if (requestBody.containsKey("notifyUrlComplete")) {
+                    System.out.println("  notifyUrlComplete: " + requestBody.get("notifyUrlComplete"));
+                    System.out.println("  notifyUrlCompleteAuthKey: " + requestBody.get("notifyUrlCompleteAuthKey"));
+                    System.out.println("  notifyUrlCompleteAuthHeaderName: " + requestBody.get("notifyUrlCompleteAuthHeaderName"));
+                }
+                if (requestBody.containsKey("notifyUrlEvent")) {
+                    System.out.println("  notifyUrlEvent: " + requestBody.get("notifyUrlEvent"));
+                    System.out.println("  notifyUrlEventAuthKey: " + requestBody.get("notifyUrlEventAuthKey"));
+                    System.out.println("  notifyUrlEventAuthHeaderName: " + requestBody.get("notifyUrlEventAuthHeaderName"));
+                }
                 System.out.println("===========================================");
             } else {
                 log.debug("API URL: {}", idverseApiUrl);
@@ -134,6 +166,14 @@ public class IdVerificationService {
                 log.debug("  - transactionId: {}", request.getTransactionId());
                 if (request.getName() != null) log.debug("  - name: {}", request.getName());
                 if (request.getSuppliedFirstName() != null) log.debug("  - suppliedFirstName: {}", request.getSuppliedFirstName());
+                if (requestBody.containsKey("notifyUrlComplete")) {
+                    log.debug("  - notifyUrlComplete: {}", requestBody.get("notifyUrlComplete"));
+                    log.debug("  - notifyUrlCompleteAuthHeaderName: {}", requestBody.get("notifyUrlCompleteAuthHeaderName"));
+                }
+                if (requestBody.containsKey("notifyUrlEvent")) {
+                    log.debug("  - notifyUrlEvent: {}", requestBody.get("notifyUrlEvent"));
+                    log.debug("  - notifyUrlEventAuthHeaderName: {}", requestBody.get("notifyUrlEventAuthHeaderName"));
+                }
             }
 
             log.debug("Step 3: Sending HTTP request to IDVerse API...");
@@ -171,15 +211,31 @@ public class IdVerificationService {
             log.error("Response Body: {}", e.getResponseBodyAsString());
             log.error("========================");
 
-            // Truncate error message for 422 status
             String errorMessage;
+            String responseBody = e.getResponseBodyAsString();
+
+            // Handle CloudFront 403 errors with short message
+            if (e.getStatusCode().value() == 403 && responseBody != null &&
+                (responseBody.contains("CloudFront") || responseBody.contains("Request blocked"))) {
+                log.warn("CloudFront blocked the request - possible IP restriction or rate limiting");
+                errorMessage = "Access denied by CloudFront. The request was blocked - please check IP restrictions or contact IDVerse support.";
+                throw new RuntimeException(errorMessage);
+            }
+
+            // Truncate error message for 422 status
             if (e.getStatusCode().value() == 422) {
-                String responseBody = e.getResponseBodyAsString();
                 errorMessage = truncateErrorMessage(responseBody, 200);
                 throw new RuntimeException("API call failed with status " + e.getStatusCode() + ": " + errorMessage);
-            } else {
-                throw new RuntimeException("API call failed with status " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
             }
+
+            // For other HTML error responses, provide a short message
+            if (responseBody != null && (responseBody.trim().startsWith("<!DOCTYPE") || responseBody.trim().startsWith("<HTML"))) {
+                errorMessage = "API returned HTTP " + e.getStatusCode().value() + " error. Please contact support.";
+                throw new RuntimeException(errorMessage);
+            }
+
+            // For JSON errors or other non-HTML responses, include the response body
+            throw new RuntimeException("API call failed with status " + e.getStatusCode() + ": " + responseBody);
         } catch (RuntimeException e) {
             // Re-throw our own RuntimeExceptions (like HTML validation error) without wrapping
             log.error("=== Unexpected Error During API Call ===");
