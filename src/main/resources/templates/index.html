@@ -124,8 +124,21 @@
                                         <td th:text="${verification.referenceId}">REF123</td>
                                         <td th:text="${verification.transactionId}">txn-12345</td>
                                         <td>
-                                            <span th:if="${verification.status == 'SUCCESS'}" class="badge bg-success" th:text="${verification.status}">SUCCESS</span>
+                                            <span th:if="${verification.status == 'SMS SENT'}" class="badge bg-success" th:text="${verification.status}">SMS SENT</span>
                                             <span th:if="${verification.status == 'FAILURE'}" class="badge bg-danger" th:text="${verification.status}">FAILURE</span>
+                                            <span th:if="${verification.status == 'COMPLETED PASS'}" class="badge bg-success" th:text="${verification.status}">COMPLETED PASS</span>
+                                            <span th:if="${verification.status == 'COMPLETED FLAGGED'}" class="badge bg-warning text-dark" th:text="${verification.status}">COMPLETED FLAGGED</span>
+                                            <span th:if="${verification.status == 'EXPIRED'}" class="badge bg-secondary" th:text="${verification.status}">EXPIRED</span>
+                                            <span th:if="${verification.status == 'CANCELLED'}" class="badge bg-secondary" th:text="${verification.status}">CANCELLED</span>
+                                            <span th:if="${verification.status == 'PENDING'}" class="badge bg-info text-dark" th:text="${verification.status}">PENDING</span>
+                                            <span th:if="${verification.status == 'TERMS AND CONDITIONS'}" class="badge bg-info text-dark" th:text="${verification.status}">TERMS AND CONDITIONS</span>
+                                            <span th:if="${verification.status == 'ID SELECTION'}" class="badge bg-info text-dark" th:text="${verification.status}">ID SELECTION</span>
+                                            <span th:if="${verification.status == 'PERSONAL DETAILS'}" class="badge bg-info text-dark" th:text="${verification.status}">PERSONAL DETAILS</span>
+                                            <span th:if="${verification.status == 'LIVENESS'}" class="badge bg-info text-dark" th:text="${verification.status}">LIVENESS</span>
+                                            <!-- Default case for any other status -->
+                                            <span th:if="${verification.status != 'SMS SENT' and verification.status != 'FAILURE' and verification.status != 'COMPLETED PASS' and verification.status != 'COMPLETED FLAGGED' and verification.status != 'EXPIRED' and verification.status != 'CANCELLED' and verification.status != 'PENDING' and verification.status != 'TERMS AND CONDITIONS' and verification.status != 'ID SELECTION' and verification.status != 'PERSONAL DETAILS' and verification.status != 'LIVENESS'}"
+                                                  class="badge bg-secondary"
+                                                  th:text="${verification.status}">UNKNOWN</span>
                                         </td>
                                         <td th:text="${#temporals.format(verification.timestamp, 'yyyy-MM-dd HH:mm:ss')}">2024-01-01 12:00:00</td>
                                     </tr>
