@@ -40,10 +40,10 @@ public class WebController {
         request.setReferenceId(referenceId != null && !referenceId.isEmpty()
             ? referenceId : "ref-" + System.currentTimeMillis());
 
-        // Optional fields
+        // Optional fields - set transactionId from TRANSACTION env var
         String transaction = dotenv.get("TRANSACTION");
         if (transaction != null && !transaction.isEmpty()) {
-            request.setTransaction(transaction);
+            request.setTransactionId(transaction);
         }
 
         String name = dotenv.get("NAME");

@@ -38,12 +38,6 @@ public class IdVerificationService {
         ensureTransactionId(request);
         log.info("Transaction ID: {}", request.getTransactionId());
 
-        // Ensure transaction field has random suffix (min 12 chars)
-        ensureTransaction(request);
-        if (request.getTransaction() != null) {
-            log.info("Transaction: {}", request.getTransaction());
-        }
-
         log.debug("Request Object: {}", request);
 
         // Combine phone code and number for storage
@@ -100,9 +94,6 @@ public class IdVerificationService {
             requestBody.put("transactionId", request.getTransactionId());
 
             // Add optional fields if present
-            if (request.getTransaction() != null && !request.getTransaction().trim().isEmpty()) {
-                requestBody.put("transaction", request.getTransaction());
-            }
             if (request.getName() != null && !request.getName().trim().isEmpty()) {
                 requestBody.put("name", request.getName());
             }
@@ -126,7 +117,6 @@ public class IdVerificationService {
                 System.out.println("  phoneNumber: " + request.getPhoneNumber());
                 System.out.println("  referenceId: " + request.getReferenceId());
                 System.out.println("  transactionId: " + request.getTransactionId());
-                if (request.getTransaction() != null) System.out.println("  transaction: " + request.getTransaction());
                 if (request.getName() != null) System.out.println("  name: " + request.getName());
                 if (request.getSuppliedFirstName() != null) System.out.println("  suppliedFirstName: " + request.getSuppliedFirstName());
                 System.out.println("===========================================");
@@ -142,7 +132,6 @@ public class IdVerificationService {
                 log.debug("  - phoneNumber: {}", request.getPhoneNumber());
                 log.debug("  - referenceId: {}", request.getReferenceId());
                 log.debug("  - transactionId: {}", request.getTransactionId());
-                if (request.getTransaction() != null) log.debug("  - transaction: {}", request.getTransaction());
                 if (request.getName() != null) log.debug("  - name: {}", request.getName());
                 if (request.getSuppliedFirstName() != null) log.debug("  - suppliedFirstName: {}", request.getSuppliedFirstName());
             }
@@ -267,30 +256,6 @@ public class IdVerificationService {
             sb.append(chars.charAt(random.nextInt(chars.length())));
         }
         return sb.toString();
-    }
-
-    /**
-     * Ensures that the request has a valid transaction field with random suffix.
-     * If the transaction is null or empty, does nothing.
-     * If provided, appends a 4-character random string (or enough to reach min 12 chars).
-     */
-    private void ensureTransaction(VerificationRequest request) {
-        if (request.getTransaction() == null || request.getTransaction().trim().isEmpty()) {
-            return; // Leave it empty if not provided
-        }
-
-        String transaction = request.getTransaction().trim();
-        int currentLength = transaction.length();
-        int minLength = 12;
-
-        // Calculate how many random characters needed (minimum 4)
-        int randomCharsNeeded = Math.max(4, minLength - currentLength);
-
-        String randomSuffix = generateRandomAlphanumeric(randomCharsNeeded);
-        String finalTransaction = transaction + "-" + randomSuffix;
-
-        request.setTransaction(finalTransaction);
-        log.debug("Transaction with random suffix: {}", finalTransaction);
     }
 
     /**

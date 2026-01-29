@@ -28,9 +28,6 @@ public class VerificationRequest {
     @Pattern(regexp = "^[a-zA-Z0-9\\s_-]*$", message = "Transaction ID can only contain alphanumeric characters, spaces, hyphens, and underscores")
     private String transactionId;
 
-    // Optional - for transaction field with random suffix
-    private String transaction;
-
     // Optional - name field
     private String name;
 
