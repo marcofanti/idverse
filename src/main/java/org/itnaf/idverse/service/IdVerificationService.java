@@ -57,7 +57,7 @@ public class IdVerificationService {
             String apiResponse = callExternalApi(request);
 
             record.setApiResponse(apiResponse);
-            record.setStatus("SUCCESS");
+            record.setStatus("SMS SENT");
 
             log.info("✓ Verification successful for reference: {}", request.getReferenceId());
             log.debug("API Response received: {}", apiResponse);

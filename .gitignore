@@ -39,7 +39,6 @@ build/
 .DS_Store
 
 .env
-.env.local
 Curl.txt
 
 ### Logs ###

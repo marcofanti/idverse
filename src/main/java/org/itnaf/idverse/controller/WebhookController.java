@@ -1,15 +1,20 @@
 package org.itnaf.idverse.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.JwtException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.itnaf.idverse.model.VerificationRecord;
 import org.itnaf.idverse.model.WebhookPayload;
+import org.itnaf.idverse.repository.VerificationRepository;
 import org.itnaf.idverse.service.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,6 +28,8 @@ import java.util.Map;
 public class WebhookController {
 
     private final JwtService jwtService;
+    private final VerificationRepository verificationRepository;
+    private final ObjectMapper objectMapper;
 
     /**
      * Webhook endpoint for receiving event and completion notifications from IDVerse API.
@@ -82,12 +89,57 @@ public class WebhookController {
         // Process webhook payload
         log.info("Processing webhook event: {} for transaction: {}", payload.getEvent(), payload.getTransactionId());
 
-        // TODO: Add business logic here to handle different event types
-        // For example:
-        // - Update verification record status
-        // - Send notifications
-        // - Trigger workflows based on event type
+        // Lookup transaction ID in database - prioritize "SMS SENT", then "FAILURE"
+        List<VerificationRecord> existingRecords = verificationRepository
+                .findByTransactionIdAndStatusOrderByTimestampDesc(
+                        payload.getTransactionId(),
+                        "SMS SENT"
+                );
 
+        if (existingRecords.isEmpty()) {
+            existingRecords = verificationRepository
+                    .findByTransactionIdAndStatusOrderByTimestampDesc(
+                            payload.getTransactionId(),
+                            "FAILURE"
+                    );
+        }
+
+        // Prepare new record
+        VerificationRecord newRecord = new VerificationRecord();
+        newRecord.setTransactionId(payload.getTransactionId());
+        newRecord.setStatus(convertEventToStatus(payload.getEvent()));
+
+        // Convert webhook payload to JSON string for apiResponse
+        String webhookJson;
+        try {
+            webhookJson = objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize webhook payload to JSON", e);
+            webhookJson = "{\"transactionId\":\"" + payload.getTransactionId() +
+                          "\",\"event\":\"" + payload.getEvent() + "\"}";
+        }
+        newRecord.setApiResponse(webhookJson);
+
+        // If existing record found, copy phoneNumber and referenceId
+        if (!existingRecords.isEmpty()) {
+            VerificationRecord existingRecord = existingRecords.get(0); // Most recent
+            newRecord.setPhoneNumber(existingRecord.getPhoneNumber());
+            newRecord.setReferenceId(existingRecord.getReferenceId());
+            log.info("Found existing record for transaction {}, copied phoneNumber and referenceId",
+                    payload.getTransactionId());
+        } else {
+            // Transaction ID not found - log warning and set error message
+            log.warn("Transaction ID {} not found in database with status 'SMS SENT' or 'FAILURE'",
+                    payload.getTransactionId());
+            newRecord.setErrorMessage("Transaction ID not found in database at time of webhook receipt");
+        }
+
+        // Save new record
+        VerificationRecord savedRecord = verificationRepository.save(newRecord);
+        log.info("Created new verification record with ID {} for webhook event: {}",
+                savedRecord.getId(), payload.getEvent());
+
+        // Log event type
         switch (payload.getEvent().toLowerCase()) {
             case "pending":
                 log.info("Transaction link sent to end-user");
@@ -126,8 +178,34 @@ public class WebhookController {
                 "status", "success",
                 "message", "Webhook received and processed",
                 "transactionId", payload.getTransactionId(),
-                "event", payload.getEvent()
+                "event", payload.getEvent(),
+                "recordId", String.valueOf(savedRecord.getId())
         ));
+    }
+
+    /**
+     * Converts camelCase event name to UPPERCASE WITH SPACES.
+     * Examples:
+     * - "completedPass" -> "COMPLETED PASS"
+     * - "termsAndConditions" -> "TERMS AND CONDITIONS"
+     * - "pending" -> "PENDING"
+     */
+    private String convertEventToStatus(String event) {
+        if (event == null || event.isEmpty()) {
+            return "";
+        }
+
+        // Insert space before uppercase letters (except first character)
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < event.length(); i++) {
+            char c = event.charAt(i);
+            if (i > 0 && Character.isUpperCase(c)) {
+                result.append(' ');
+            }
+            result.append(Character.toUpperCase(c));
+        }
+
+        return result.toString();
     }
 
     /**

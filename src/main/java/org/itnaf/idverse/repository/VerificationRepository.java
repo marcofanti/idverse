@@ -12,4 +12,7 @@ public interface VerificationRepository extends JpaRepository<VerificationRecord
     List<VerificationRecord> findByReferenceId(String referenceId);
 
     List<VerificationRecord> findByPhoneNumber(String phoneNumber);
+
+    List<VerificationRecord> findByTransactionIdAndStatusOrderByTimestampDesc(
+            String transactionId, String status);
 }

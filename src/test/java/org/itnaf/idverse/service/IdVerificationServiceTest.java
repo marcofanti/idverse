@@ -174,7 +174,7 @@ class IdVerificationServiceTest {
 
         // Then
         assertNotNull(response);
-        assertEquals("SUCCESS", response.getStatus());
+        assertEquals("SMS SENT", response.getStatus());
 
         // Verify request had correct headers
         RecordedRequest recordedRequest = mockWebServer.takeRequest();
