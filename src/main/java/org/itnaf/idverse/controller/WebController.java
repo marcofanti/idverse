@@ -22,10 +22,34 @@ import java.util.List;
 public class WebController {
 
     private final IdVerificationService verificationService;
+    private final String defaultPhoneCode;
+    private final String defaultPhoneNumber;
+    private final String defaultTransaction;
+    private final String defaultName;
+    private final String defaultSuppliedFirstName;
 
     @GetMapping("/")
     public String home(Model model) {
-        model.addAttribute("verificationRequest", new VerificationRequest());
+        VerificationRequest request = new VerificationRequest();
+
+        // Set default values from .env if available
+        if (defaultPhoneCode != null && !defaultPhoneCode.isEmpty()) {
+            request.setPhoneCode(defaultPhoneCode);
+        }
+        if (defaultPhoneNumber != null && !defaultPhoneNumber.isEmpty()) {
+            request.setPhoneNumber(defaultPhoneNumber);
+        }
+        if (defaultTransaction != null && !defaultTransaction.isEmpty()) {
+            request.setTransaction(defaultTransaction);
+        }
+        if (defaultName != null && !defaultName.isEmpty()) {
+            request.setName(defaultName);
+        }
+        if (defaultSuppliedFirstName != null && !defaultSuppliedFirstName.isEmpty()) {
+            request.setSuppliedFirstName(defaultSuppliedFirstName);
+        }
+
+        model.addAttribute("verificationRequest", request);
         model.addAttribute("verifications", verificationService.getAllVerifications());
         return "index";
     }

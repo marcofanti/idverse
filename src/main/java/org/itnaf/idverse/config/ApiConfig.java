@@ -99,6 +99,31 @@ public class ApiConfig {
     }
 
     @Bean
+    public String defaultPhoneCode() {
+        return dotenv.get("PHONE_CODE");
+    }
+
+    @Bean
+    public String defaultPhoneNumber() {
+        return dotenv.get("PHONE_NUMBER");
+    }
+
+    @Bean
+    public String defaultTransaction() {
+        return dotenv.get("TRANSACTION");
+    }
+
+    @Bean
+    public String defaultName() {
+        return dotenv.get("NAME");
+    }
+
+    @Bean
+    public String defaultSuppliedFirstName() {
+        return dotenv.get("SUPPLIED_FIRST_NAME");
+    }
+
+    @Bean
     public WebClient webClient() {
         return WebClient.builder()
                 .defaultHeader("Content-Type", "application/json")

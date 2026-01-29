@@ -18,19 +18,35 @@
                     </div>
                     <div class="card-body">
                         <form th:action="@{/verify}" th:object="${verificationRequest}" method="post">
-                            <div class="mb-3">
-                                <label for="phoneNumber" class="form-label">Phone Number</label>
-                                <input type="text"
-                                       class="form-control"
-                                       th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid' : ''"
-                                       id="phoneNumber"
-                                       th:field="*{phoneNumber}"
-                                       placeholder="+1234567890"
-                                       required>
-                                <div class="invalid-feedback" th:if="${#fields.hasErrors('phoneNumber')}" th:errors="*{phoneNumber}">
-                                    Phone number error
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="phoneCode" class="form-label">Phone Code</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           th:classappend="${#fields.hasErrors('phoneCode')} ? 'is-invalid' : ''"
+                                           id="phoneCode"
+                                           th:field="*{phoneCode}"
+                                           placeholder="+1"
+                                           required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('phoneCode')}" th:errors="*{phoneCode}">
+                                        Phone code error
+                                    </div>
+                                    <small class="form-text text-muted">e.g., +1</small>
                                 </div>
-                                <small class="form-text text-muted">Use international format (e.g., +1234567890)</small>
+                                <div class="col-md-8">
+                                    <label for="phoneNumber" class="form-label">Phone Number</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           th:classappend="${#fields.hasErrors('phoneNumber')} ? 'is-invalid' : ''"
+                                           id="phoneNumber"
+                                           th:field="*{phoneNumber}"
+                                           placeholder="9412607454"
+                                           required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('phoneNumber')}" th:errors="*{phoneNumber}">
+                                        Phone number error
+                                    </div>
+                                    <small class="form-text text-muted">4-15 digits</small>
+                                </div>
                             </div>
 
                             <div class="mb-3">
@@ -59,6 +75,34 @@
                                     Transaction ID error
                                 </div>
                                 <small class="form-text text-muted">10-128 characters. Alphanumeric, spaces, hyphens, and underscores only. Auto-generated if left empty.</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="transaction" class="form-label">Transaction <span class="text-muted">(Optional)</span></label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="transaction"
+                                       th:field="*{transaction}"
+                                       placeholder="tmx-dkjhas9843">
+                                <small class="form-text text-muted">Random suffix will be appended (min 12 chars total)</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name <span class="text-muted">(Optional)</span></label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="name"
+                                       th:field="*{name}"
+                                       placeholder="Marco">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="suppliedFirstName" class="form-label">Supplied First Name <span class="text-muted">(Optional)</span></label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="suppliedFirstName"
+                                       th:field="*{suppliedFirstName}"
+                                       placeholder="Marco">
                             </div>
 
                             <button type="submit" class="btn btn-primary w-100">Verify</button>

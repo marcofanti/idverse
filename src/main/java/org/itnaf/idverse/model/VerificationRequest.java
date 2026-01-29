@@ -12,8 +12,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class VerificationRequest {
 
+    @NotBlank(message = "Phone code is required")
+    @Pattern(regexp = "^\\+?[1-9]\\d{0,3}$", message = "Invalid phone code format (e.g., +1)")
+    private String phoneCode;
+
     @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format. Use international format (e.g., +1234567890)")
+    @Pattern(regexp = "^\\d{4,15}$", message = "Invalid phone number format (4-15 digits)")
     private String phoneNumber;
 
     @NotBlank(message = "Reference ID is required")
@@ -23,4 +27,13 @@ public class VerificationRequest {
     @Size(min = 10, max = 128, message = "Transaction ID must be between 10 and 128 characters")
     @Pattern(regexp = "^[a-zA-Z0-9\\s_-]*$", message = "Transaction ID can only contain alphanumeric characters, spaces, hyphens, and underscores")
     private String transactionId;
+
+    // Optional - for transaction field with random suffix
+    private String transaction;
+
+    // Optional - name field
+    private String name;
+
+    // Optional - supplied first name
+    private String suppliedFirstName;
 }

@@ -30,16 +30,27 @@ public class IdVerificationService {
 
     public VerificationResponse verify(VerificationRequest request) {
         log.info("=== Starting Verification Process ===");
+        log.info("Phone Code: {}", request.getPhoneCode());
         log.info("Phone Number: {}", request.getPhoneNumber());
         log.info("Reference ID: {}", request.getReferenceId());
 
         // Ensure transactionId is set (generate if empty/null)
         ensureTransactionId(request);
         log.info("Transaction ID: {}", request.getTransactionId());
+
+        // Ensure transaction field has random suffix (min 12 chars)
+        ensureTransaction(request);
+        if (request.getTransaction() != null) {
+            log.info("Transaction: {}", request.getTransaction());
+        }
+
         log.debug("Request Object: {}", request);
 
+        // Combine phone code and number for storage
+        String fullPhoneNumber = request.getPhoneCode() + request.getPhoneNumber();
+
         VerificationRecord record = VerificationRecord.builder()
-                .phoneNumber(request.getPhoneNumber())
+                .phoneNumber(fullPhoneNumber)
                 .referenceId(request.getReferenceId())
                 .transactionId(request.getTransactionId())
                 .build();
@@ -82,11 +93,22 @@ public class IdVerificationService {
             log.debug("✓ Access token obtained: {}", maskedToken);
 
             // Prepare request body
-            Map<String, String> requestBody = Map.of(
-                    "phoneNumber", request.getPhoneNumber(),
-                    "referenceId", request.getReferenceId(),
-                    "transactionId", request.getTransactionId()
-            );
+            java.util.HashMap<String, String> requestBody = new java.util.HashMap<>();
+            requestBody.put("phoneCode", request.getPhoneCode());
+            requestBody.put("phoneNumber", request.getPhoneNumber());
+            requestBody.put("referenceId", request.getReferenceId());
+            requestBody.put("transactionId", request.getTransactionId());
+
+            // Add optional fields if present
+            if (request.getTransaction() != null && !request.getTransaction().trim().isEmpty()) {
+                requestBody.put("transaction", request.getTransaction());
+            }
+            if (request.getName() != null && !request.getName().trim().isEmpty()) {
+                requestBody.put("name", request.getName());
+            }
+            if (request.getSuppliedFirstName() != null && !request.getSuppliedFirstName().trim().isEmpty()) {
+                requestBody.put("suppliedFirstName", request.getSuppliedFirstName());
+            }
 
             log.debug("Step 2: Preparing API request");
 
@@ -100,9 +122,13 @@ public class IdVerificationService {
                 System.out.println("  Accept: application/json");
                 System.out.println("  Authorization: Bearer " + accessToken);
                 System.out.println("Request Body:");
+                System.out.println("  phoneCode: " + request.getPhoneCode());
                 System.out.println("  phoneNumber: " + request.getPhoneNumber());
                 System.out.println("  referenceId: " + request.getReferenceId());
                 System.out.println("  transactionId: " + request.getTransactionId());
+                if (request.getTransaction() != null) System.out.println("  transaction: " + request.getTransaction());
+                if (request.getName() != null) System.out.println("  name: " + request.getName());
+                if (request.getSuppliedFirstName() != null) System.out.println("  suppliedFirstName: " + request.getSuppliedFirstName());
                 System.out.println("===========================================");
             } else {
                 log.debug("API URL: {}", idverseApiUrl);
@@ -112,9 +138,13 @@ public class IdVerificationService {
                 log.debug("  - Accept: application/json");
                 log.debug("  - Authorization: Bearer {}", maskedToken);
                 log.debug("Request Body:");
+                log.debug("  - phoneCode: {}", request.getPhoneCode());
                 log.debug("  - phoneNumber: {}", request.getPhoneNumber());
                 log.debug("  - referenceId: {}", request.getReferenceId());
                 log.debug("  - transactionId: {}", request.getTransactionId());
+                if (request.getTransaction() != null) log.debug("  - transaction: {}", request.getTransaction());
+                if (request.getName() != null) log.debug("  - name: {}", request.getName());
+                if (request.getSuppliedFirstName() != null) log.debug("  - suppliedFirstName: {}", request.getSuppliedFirstName());
             }
 
             log.debug("Step 3: Sending HTTP request to IDVerse API...");
@@ -151,7 +181,16 @@ public class IdVerificationService {
             log.error("Response Headers: {}", e.getHeaders());
             log.error("Response Body: {}", e.getResponseBodyAsString());
             log.error("========================");
-            throw new RuntimeException("API call failed with status " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+
+            // Truncate error message for 422 status
+            String errorMessage;
+            if (e.getStatusCode().value() == 422) {
+                String responseBody = e.getResponseBodyAsString();
+                errorMessage = truncateErrorMessage(responseBody, 200);
+                throw new RuntimeException("API call failed with status " + e.getStatusCode() + ": " + errorMessage);
+            } else {
+                throw new RuntimeException("API call failed with status " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+            }
         } catch (RuntimeException e) {
             // Re-throw our own RuntimeExceptions (like HTML validation error) without wrapping
             log.error("=== Unexpected Error During API Call ===");
@@ -228,5 +267,39 @@ public class IdVerificationService {
             sb.append(chars.charAt(random.nextInt(chars.length())));
         }
         return sb.toString();
+    }
+
+    /**
+     * Ensures that the request has a valid transaction field with random suffix.
+     * If the transaction is null or empty, does nothing.
+     * If provided, appends a 4-character random string (or enough to reach min 12 chars).
+     */
+    private void ensureTransaction(VerificationRequest request) {
+        if (request.getTransaction() == null || request.getTransaction().trim().isEmpty()) {
+            return; // Leave it empty if not provided
+        }
+
+        String transaction = request.getTransaction().trim();
+        int currentLength = transaction.length();
+        int minLength = 12;
+
+        // Calculate how many random characters needed (minimum 4)
+        int randomCharsNeeded = Math.max(4, minLength - currentLength);
+
+        String randomSuffix = generateRandomAlphanumeric(randomCharsNeeded);
+        String finalTransaction = transaction + "-" + randomSuffix;
+
+        request.setTransaction(finalTransaction);
+        log.debug("Transaction with random suffix: {}", finalTransaction);
+    }
+
+    /**
+     * Truncates error message to specified length, adding ellipsis if truncated.
+     */
+    private String truncateErrorMessage(String message, int maxLength) {
+        if (message == null || message.length() <= maxLength) {
+            return message;
+        }
+        return message.substring(0, maxLength) + "... [truncated]";
     }
 }

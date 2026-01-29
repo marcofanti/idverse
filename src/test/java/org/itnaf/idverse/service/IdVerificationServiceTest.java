@@ -64,7 +64,8 @@ class IdVerificationServiceTest {
             .addHeader("Content-Type", "application/json"));
 
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
 
         // When
@@ -91,7 +92,8 @@ class IdVerificationServiceTest {
             .addHeader("Content-Type", "text/html"));
 
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
 
         // Mock repository save
@@ -118,7 +120,8 @@ class IdVerificationServiceTest {
             .addHeader("Content-Type", "text/html"));
 
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
 
         // Mock repository save
@@ -146,7 +149,8 @@ class IdVerificationServiceTest {
             .addHeader("Content-Type", "application/json"));
 
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
 
         // Mock repository save
@@ -176,7 +180,8 @@ class IdVerificationServiceTest {
             .setBody("Unauthorized"));
 
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
 
         // When & Then
@@ -194,7 +199,8 @@ class IdVerificationServiceTest {
             .setBodyDelay(35, java.util.concurrent.TimeUnit.SECONDS)); // Longer than 30s timeout
 
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
 
         // When & Then
@@ -212,7 +218,8 @@ class IdVerificationServiceTest {
             .addHeader("Content-Type", "application/json"));
 
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
         // transactionId is null
 
@@ -247,7 +254,8 @@ class IdVerificationServiceTest {
 
         String customTransactionId = "my-custom-txn-id-12345";
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
         request.setTransactionId(customTransactionId);
 
@@ -276,7 +284,8 @@ class IdVerificationServiceTest {
             .addHeader("Content-Type", "application/json"));
 
         VerificationRequest request = new VerificationRequest();
-        request.setPhoneNumber("+19412607454");
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
         request.setReferenceId("test-ref-123");
         request.setTransactionId("   "); // Empty/whitespace only
 
