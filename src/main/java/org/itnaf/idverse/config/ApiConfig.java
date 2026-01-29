@@ -149,6 +149,16 @@ public class ApiConfig {
     }
 
     @Bean
+    public String authKey() {
+        String key = dotenv.get("AUTH_KEY");
+        if (key == null || key.isEmpty()) {
+            log.warn("AUTH_KEY not configured - using default (INSECURE for production)");
+            return "default-auth-key-change-me";
+        }
+        return key;
+    }
+
+    @Bean
     public WebClient webClient() {
         return WebClient.builder()
                 .defaultHeader("Content-Type", "application/json")

@@ -65,6 +65,28 @@ public class JwtService {
     }
 
     /**
+     * Generates a JWT token with custom expiration time.
+     *
+     * @param subject The subject
+     * @param expirationHours Number of hours until token expires
+     * @return JWT token string
+     */
+    public String generateTokenWithExpiration(String subject, long expirationHours) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + (expirationHours * 3600 * 1000));
+
+        String token = Jwts.builder()
+                .subject(subject)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(secretKey)
+                .compact();
+
+        log.debug("Generated JWT token for subject: {} with {}h expiration", subject, expirationHours);
+        return token;
+    }
+
+    /**
      * Validates a JWT token and returns the claims if valid.
      *
      * @param token The JWT token to validate
