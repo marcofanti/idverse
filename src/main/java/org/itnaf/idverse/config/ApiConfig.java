@@ -23,6 +23,11 @@ public class ApiConfig {
                 .load();
     }
 
+    @Bean
+    public Dotenv dotenv() {
+        return this.dotenv;
+    }
+
     @PostConstruct
     public void configureLogging() {
         String verboseLevel = dotenv.get("VERBOSE");
@@ -47,6 +52,7 @@ public class ApiConfig {
         // Set default values as system properties for @Value injection
         setSystemPropertyIfPresent("default.phone.code", dotenv.get("PHONE_CODE"));
         setSystemPropertyIfPresent("default.phone.number", dotenv.get("PHONE_NUMBER"));
+        setSystemPropertyIfPresent("default.reference.id", dotenv.get("REFERENCE_ID"));
         setSystemPropertyIfPresent("default.transaction", dotenv.get("TRANSACTION"));
         setSystemPropertyIfPresent("default.name", dotenv.get("NAME"));
         setSystemPropertyIfPresent("default.supplied.first.name", dotenv.get("SUPPLIED_FIRST_NAME"));

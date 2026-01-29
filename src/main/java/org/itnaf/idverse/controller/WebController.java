@@ -1,12 +1,12 @@
 package org.itnaf.idverse.controller;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.itnaf.idverse.model.VerificationRequest;
 import org.itnaf.idverse.model.VerificationResponse;
 import org.itnaf.idverse.service.IdVerificationService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -18,49 +18,42 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @Controller
+@RequiredArgsConstructor
 @Slf4j
 public class WebController {
 
     private final IdVerificationService verificationService;
-
-    @Value("${default.phone.code:#{null}}")
-    private String defaultPhoneCode;
-
-    @Value("${default.phone.number:#{null}}")
-    private String defaultPhoneNumber;
-
-    @Value("${default.transaction:#{null}}")
-    private String defaultTransaction;
-
-    @Value("${default.name:#{null}}")
-    private String defaultName;
-
-    @Value("${default.supplied.first.name:#{null}}")
-    private String defaultSuppliedFirstName;
-
-    public WebController(IdVerificationService verificationService) {
-        this.verificationService = verificationService;
-    }
+    private final Dotenv dotenv;
 
     @GetMapping("/")
     public String home(Model model) {
         VerificationRequest request = new VerificationRequest();
 
-        // Set default values from .env if available
-        if (defaultPhoneCode != null && !defaultPhoneCode.isEmpty()) {
-            request.setPhoneCode(defaultPhoneCode);
+        // Set default values from .env if available, with fallbacks for required fields
+        String phoneCode = dotenv.get("PHONE_CODE");
+        request.setPhoneCode(phoneCode != null && !phoneCode.isEmpty() ? phoneCode : "+1");
+
+        String phoneNumber = dotenv.get("PHONE_NUMBER");
+        request.setPhoneNumber(phoneNumber != null && !phoneNumber.isEmpty() ? phoneNumber : "9412607454");
+
+        String referenceId = dotenv.get("REFERENCE_ID");
+        request.setReferenceId(referenceId != null && !referenceId.isEmpty()
+            ? referenceId : "ref-" + System.currentTimeMillis());
+
+        // Optional fields
+        String transaction = dotenv.get("TRANSACTION");
+        if (transaction != null && !transaction.isEmpty()) {
+            request.setTransaction(transaction);
         }
-        if (defaultPhoneNumber != null && !defaultPhoneNumber.isEmpty()) {
-            request.setPhoneNumber(defaultPhoneNumber);
+
+        String name = dotenv.get("NAME");
+        if (name != null && !name.isEmpty()) {
+            request.setName(name);
         }
-        if (defaultTransaction != null && !defaultTransaction.isEmpty()) {
-            request.setTransaction(defaultTransaction);
-        }
-        if (defaultName != null && !defaultName.isEmpty()) {
-            request.setName(defaultName);
-        }
-        if (defaultSuppliedFirstName != null && !defaultSuppliedFirstName.isEmpty()) {
-            request.setSuppliedFirstName(defaultSuppliedFirstName);
+
+        String suppliedFirstName = dotenv.get("SUPPLIED_FIRST_NAME");
+        if (suppliedFirstName != null && !suppliedFirstName.isEmpty()) {
+            request.setSuppliedFirstName(suppliedFirstName);
         }
 
         model.addAttribute("verificationRequest", request);
