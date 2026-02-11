@@ -6,14 +6,53 @@ A Spring Boot web application that integrates with the IDVerse API to perform id
 
 - OAuth 2.0 client credentials authentication with automatic token caching (800 seconds)
 - REST API endpoints for programmatic access
-- Web UI for manual verification requests
-- H2 in-memory database for storing verification history
+- Web UI for manual verification requests with session authentication
+- JWT-authenticated webhook endpoint for receiving IDVerse callbacks
+- Dual database support: H2 (development) and MySQL (production)
+- Docker Compose deployment with persistent MySQL storage
 - Mock OAuth endpoint for testing without external API
 - SECRET verbose mode for debugging with full request details
 - HTML response detection to prevent error pages from being treated as success
 
-## Prerequisites
+## Deployment Options
 
+### Option 1: Docker (Recommended for Production)
+
+**Prerequisites:**
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+
+**Quick Start:**
+
+```bash
+# 1. Copy environment template
+cp .env.example .env
+
+# 2. Edit .env with your IDVerse credentials
+# (Required: IDVERSE_CLIENT_ID, IDVERSE_CLIENT_SECRET, AUTH_KEY, JWT_SECRET_KEY)
+
+# 3. Start services
+docker-compose up -d
+
+# 4. View logs
+docker-compose logs -f
+
+# 5. Access the application
+# http://localhost:19746
+```
+
+**Features:**
+- ✅ Permanent MySQL database with persistent storage
+- ✅ Automatic service orchestration
+- ✅ Production-ready configuration
+- ✅ Health checks and automatic restarts
+- ✅ Data survives container restarts
+
+**See [DOCKER.md](DOCKER.md) for complete Docker deployment guide.**
+
+### Option 2: Local Development
+
+**Prerequisites:**
 - Java 21
 - Maven 3.6+
 - IDVerse API credentials (client_id and client_secret)
@@ -22,20 +61,52 @@ A Spring Boot web application that integrates with the IDVerse API to perform id
 
 ### 1. Set up environment variables
 
-Create a `.env` file in the project root directory with your IDVerse API credentials:
+Create a `.env` file in the project root directory:
 
 ```bash
-# Required: IDVerse API Credentials
+# Copy the template
+cp .env.example .env
+```
+
+Edit the `.env` file with your configuration:
+
+```bash
+# IDVerse API Credentials (Required)
 IDVERSE_CLIENT_ID=your_actual_client_id
 IDVERSE_CLIENT_SECRET=your_actual_client_secret
-IDVERSE_OAUTH_URL=https://usdemo.idkit.co/api/3.5/oauthToken
-IDVERSE_API_URL=https://usdemo.idkit.co/api/3.5/sendSms
+IDVERSE_OAUTH_URL=https://us.demo.idkit.co/api/3.5/oauthToken
+IDVERSE_API_URL=https://us.demo.idkit.co/api/3.5/sendSms
 
-# Optional: Logging Level (DEBUG, INFO, WARN, ERROR, or SECRET)
+# Webhook Configuration
+NOTIFY_URL_COMPLETE=http://localhost:19746/api/webhook
+NOTIFY_URL_EVENT=http://localhost:19746/api/webhook
+JWT_SECRET_KEY=your_jwt_secret_key_here
+
+# Web Interface Authentication (Required)
+AUTH_KEY=your_authentication_key_here
+
+# Logging Level (DEBUG, INFO, WARN, ERROR, or SECRET)
 VERBOSE=DEBUG
 
-# Optional: Mock OAuth Token (for testing with mock endpoint)
+# Mock OAuth Token (for testing with mock endpoint)
 OAUTHTOKEN=your_test_token_here
+
+# Default Form Values (Optional)
+TRANSACTION=default_transaction_id
+NAME=Default Name
+SUPPLIED_FIRST_NAME=Default First Name
+
+# MySQL Configuration (Docker only)
+MYSQL_ROOT_PASSWORD=rootpassword
+MYSQL_DATABASE=idverse
+MYSQL_USER=idverse_user
+MYSQL_PASSWORD=idverse_pass
+MYSQL_PORT=3306
+
+# Application Settings (Docker)
+APP_PORT=19746
+DDL_AUTO=update
+SHOW_SQL=false
 ```
 
 **Note:** The `.env` file is already in `.gitignore` to prevent accidentally committing credentials.
@@ -301,9 +372,11 @@ If you need to force a new token retrieval (e.g., after updating credentials):
 curl -X POST http://localhost:19746/test/oauth/clear
 ```
 
-## Database Console
+## Database Access
 
-Access the H2 database console to view stored verification records:
+### H2 Console (Local Development)
+
+When running locally with the default profile, access the H2 database console:
 
 ```
 http://localhost:19746/h2-console
@@ -312,7 +385,24 @@ http://localhost:19746/h2-console
 **Connection details:**
 - **JDBC URL:** `jdbc:h2:mem:testdb`
 - **Username:** `sa`
-- **Password:** (leave empty)
+- **Password:** `sa`
+
+### MySQL (Docker Deployment)
+
+When running via Docker, connect to MySQL:
+
+```bash
+# Via Docker Compose
+docker-compose exec mysql mysql -u idverse_user -p
+# Password: idverse_pass (or your custom password from .env)
+
+# Via external client (e.g., MySQL Workbench, DBeaver)
+# Host: localhost
+# Port: 3306
+# Database: idverse
+# Username: idverse_user
+# Password: idverse_pass
+```
 
 ## API Endpoints
 
@@ -324,21 +414,36 @@ http://localhost:19746/h2-console
 | GET | `/api/verifications` | Get all verification records |
 | GET | `/api/verifications/{id}` | Get specific verification by ID |
 
+### Webhook API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/webhook` | Receive webhook callbacks from IDVerse (JWT authenticated) |
+
+**Webhook Authentication:**
+- Requires `Authorization: Bearer <JWT_TOKEN>` header
+- JWT must be signed with `JWT_SECRET_KEY` from `.env`
+- Used by IDVerse to send verification status updates
+
 ### Test API
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/test/oauth` | Test OAuth token retrieval |
+| GET | `/test/oauth?verbose=debug` | Verbose OAuth test with full details |
 | GET | `/test/config` | Test configuration and get token |
 | POST | `/test/oauth/clear` | Clear cached OAuth token |
+| POST | `/api/3.5/oauthToken` | Mock OAuth endpoint (returns OAUTHTOKEN from .env) |
 
 ### Web UI
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Home page with verification form |
+| GET | `/` | Home page with verification form (requires AUTH_KEY) |
 | POST | `/verify` | Submit verification via web form |
 | GET | `/results` | View verification results |
+| POST | `/login` | Authenticate with AUTH_KEY |
+| POST | `/logout` | Clear session |
 
 ## OAuth Token Management
 
@@ -375,30 +480,97 @@ The application automatically manages OAuth tokens:
 
 **Solution:** Provide a non-empty reference ID.
 
+### Docker Issues
+
+**Error:** `Application can't connect to MySQL`
+
+**Solution:**
+1. Check MySQL health: `docker-compose ps`
+2. View MySQL logs: `docker-compose logs mysql`
+3. Verify MySQL is healthy before app starts (health check should handle this)
+4. Check credentials in `.env` match `docker-compose.yml`
+
+**Error:** `Port already in use` (19746 or 3306)
+
+**Solution:** Change ports in `.env`:
+```bash
+APP_PORT=8080
+MYSQL_PORT=3307
+```
+
+**Error:** `Database connection refused`
+
+**Solution:** Ensure MySQL container is healthy:
+```bash
+docker-compose exec mysql mysqladmin ping -h localhost -u root -p
+```
+
+### Session/Authentication Issues
+
+**Error:** `Unauthorized access to web interface`
+
+**Solution:** Make sure you're logged in with the correct `AUTH_KEY` from `.env`.
+
+**Error:** `Webhook authentication failed`
+
+**Solution:** Ensure the JWT token in the webhook request is signed with the `JWT_SECRET_KEY` from `.env`.
+
 ## Development
 
 ### Project Structure
 
 ```
-src/main/java/org/itnaf/idverse/
-├── IdverseApplication.java          # Main Spring Boot application
-├── config/
-│   └── ApiConfig.java                # Configuration (loads .env file)
-├── controller/
-│   ├── ApiController.java            # REST API endpoints
-│   ├── WebController.java            # Web UI controller
-│   └── OAuthTestController.java      # OAuth testing endpoints
-├── service/
-│   ├── IdVerificationService.java    # Verification business logic
-│   └── OAuthTokenService.java        # OAuth token management
-├── model/
-│   ├── VerificationRequest.java      # Request DTO
-│   ├── VerificationResponse.java     # Response DTO
-│   ├── VerificationRecord.java       # JPA Entity
-│   └── OAuthTokenResponse.java       # OAuth response DTO
-└── repository/
-    └── VerificationRepository.java   # Spring Data JPA repository
+idverse/
+├── src/main/java/org/itnaf/idverse/
+│   ├── IdverseApplication.java          # Main Spring Boot application
+│   ├── config/
+│   │   └── ApiConfig.java                # Configuration (loads .env file)
+│   ├── controller/
+│   │   ├── ApiController.java            # REST API endpoints
+│   │   ├── WebController.java            # Web UI controller
+│   │   ├── WebhookController.java        # Webhook receiver (JWT auth)
+│   │   └── OAuthTestController.java      # OAuth testing endpoints
+│   ├── service/
+│   │   ├── IdVerificationService.java    # Verification business logic
+│   │   ├── OAuthTokenService.java        # OAuth token management (caching)
+│   │   └── SessionService.java           # Session management
+│   ├── model/
+│   │   ├── VerificationRequest.java      # Request DTO
+│   │   ├── VerificationResponse.java     # Response DTO
+│   │   ├── VerificationRecord.java       # JPA Entity
+│   │   └── OAuthTokenResponse.java       # OAuth response DTO
+│   └── repository/
+│       └── VerificationRepository.java   # Spring Data JPA repository
+├── src/main/resources/
+│   ├── application.yml                   # Default config (H2 database)
+│   ├── application-docker.yml            # Docker profile (MySQL)
+│   ├── templates/                        # Thymeleaf templates
+│   └── static/                           # Static assets
+├── docker/                               # Docker-related files
+│   └── mysql/
+│       ├── conf.d/                       # Custom MySQL config
+│       └── init/                         # DB initialization scripts
+├── pom.xml                               # Maven configuration
+├── Dockerfile                            # Application container image
+├── docker-compose.yml                    # Service orchestration
+├── .env                                  # Environment variables (gitignored)
+├── .env.example                          # Environment template
+├── .dockerignore                         # Docker build context exclusions
+├── CLAUDE.md                             # Development guide for Claude Code
+├── DOCKER.md                             # Docker deployment guide
+└── README.md                             # This file
 ```
+
+### Technology Stack
+
+- **Framework:** Spring Boot 3.2.1
+- **Java Version:** 21
+- **Database:** H2 (dev) / MySQL 8.0 (prod)
+- **Template Engine:** Thymeleaf
+- **HTTP Client:** WebFlux WebClient
+- **Security:** JWT (jjwt 0.12.3), Session-based auth
+- **Build Tool:** Maven
+- **Container:** Docker + Docker Compose
 
 ### Build Commands
 
@@ -421,6 +593,69 @@ mvn clean install -DskipTests
 # Run the application
 mvn spring-boot:run
 ```
+
+## Recent Features & Improvements
+
+### Authentication & Security
+- **JWT Webhook Authentication** - Secure webhook endpoint with JWT token validation
+- **Session Management** - Web interface protected with AUTH_KEY authentication
+- **OAuth Token Caching** - 800-second token cache reduces API calls and improves performance
+
+### Database & Deployment
+- **MySQL Support** - Production-ready MySQL database integration
+- **Docker Deployment** - Complete Docker Compose setup with persistent storage
+- **Multi-stage Dockerfile** - Optimized container images for production
+- **Database Persistence** - Named volumes ensure data survives container restarts
+- **Health Checks** - MySQL health monitoring with automatic app startup sequencing
+
+### Developer Experience
+- **Spring Profiles** - Automatic environment switching (H2 for dev, MySQL for Docker)
+- **Environment Configuration** - All sensitive values externalized to `.env` file
+- **Comprehensive Documentation** - Detailed guides (README.md, DOCKER.md, CLAUDE.md)
+- **Mock Endpoints** - Test OAuth flow without calling external APIs
+
+### Webhook Integration
+- **Webhook Receiver** - `/api/webhook` endpoint for IDVerse callbacks
+- **Event Tracking** - Store and display webhook events in verification history
+- **Status Updates** - Real-time verification status updates via webhooks
+
+## Architecture Decisions
+
+### Why Docker?
+- **Consistency** - Same environment across dev, staging, and production
+- **Isolation** - Services run in isolated containers with dedicated networking
+- **Persistence** - Data survives container restarts via named volumes
+- **Scalability** - Easy to add more services (Redis, monitoring, etc.)
+
+### Why MySQL for Production?
+- **Reliability** - Production-tested, ACID-compliant database
+- **Persistence** - Data survives application restarts (unlike H2)
+- **Performance** - Connection pooling and optimized queries
+- **Familiarity** - Well-known database with extensive tooling support
+
+### Why H2 for Development?
+- **Speed** - Instant startup, no external dependencies
+- **Convenience** - Built-in web console for quick debugging
+- **Simplicity** - No configuration needed for local development
+- **Reset** - Easy to reset database (just restart app)
+
+## Production Deployment Checklist
+
+Before deploying to production:
+
+- [ ] Change all default passwords in `.env`
+- [ ] Set strong `AUTH_KEY` and `JWT_SECRET_KEY`
+- [ ] Use real `IDVERSE_CLIENT_ID` and `IDVERSE_CLIENT_SECRET`
+- [ ] Set `DDL_AUTO=validate` to prevent automatic schema changes
+- [ ] Enable MySQL SSL connections
+- [ ] Set up regular database backups
+- [ ] Configure proper logging (not SECRET mode)
+- [ ] Set up monitoring and alerting
+- [ ] Use Docker secrets or external secrets manager
+- [ ] Review and harden network security
+- [ ] Set resource limits in `docker-compose.yml`
+- [ ] Test webhook authentication with real IDVerse callbacks
+- [ ] Set up HTTPS/TLS for production endpoints
 
 ## License
 

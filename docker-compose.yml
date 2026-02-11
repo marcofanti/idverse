@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: idverse-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-idverse}
+      MYSQL_USER: ${MYSQL_USER:-idverse_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-idverse_pass}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      # Persistent data storage
+      - mysql_data:/var/lib/mysql
+      # Optional: Custom MySQL configuration
+      - ./docker/mysql/conf.d:/etc/mysql/conf.d:ro
+      # Optional: Initialization scripts
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - idverse-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: idverse-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-19746}:19746"
+    environment:
+      # Spring profiles
+      SPRING_PROFILES_ACTIVE: docker
+
+      # Database connection
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-idverse}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-idverse_user}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-idverse_pass}
+
+      # JPA/Hibernate settings
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${DDL_AUTO:-update}
+      SPRING_JPA_SHOW_SQL: ${SHOW_SQL:-false}
+
+      # Copy any environment variables from .env file
+      # Add your custom env vars here as needed
+    volumes:
+      # Optional: Mount .env file if using dotenv-java
+      - ./.env:/app/.env:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - idverse-network
+
+networks:
+  idverse-network:
+    driver: bridge
+
+volumes:
+  # Named volume for persistent MySQL data
+  mysql_data:
+    driver: local
