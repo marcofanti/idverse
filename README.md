@@ -1,6 +1,6 @@
 # IDVerse Verification Service
 
-A Spring Boot web application that integrates with the IDVerse API to perform phone number verification. The application provides both a REST API and a web interface for submitting verification requests.
+A Spring Boot web application that integrates with the IDVerse API to perform identity verification. The application provides both a REST API and a web interface for submitting verification requests.
 
 ## Features
 
