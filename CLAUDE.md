@@ -133,16 +133,24 @@ The `.env` file configures both application and Docker deployment:
 **Authentication:**
 - `AUTH_KEY` - Web interface authentication key
 
-**Database (Docker):**
+**Database Configuration:**
+- `DATABASE_TYPE` - Database selection: `h2-memory` (default), `h2-file`, `docker`
+  - Note: Spring profile `--spring.profiles.active` overrides this
+  - Example: `export DATABASE_TYPE=h2-file`
+
+**Database (MySQL/Docker):**
 - `MYSQL_ROOT_PASSWORD` - MySQL root password
 - `MYSQL_DATABASE` - Database name (default: idverse)
 - `MYSQL_USER` - Application database user
 - `MYSQL_PASSWORD` - Application database password
+- `MYSQL_PORT` - MySQL port (default: 3307 to avoid conflicts)
 
 **Application Settings:**
 - `VERBOSE` - Logging level (DEBUG, INFO, SECRET)
 - `TRANSACTION` - Default transaction ID
 - `NAME` - Default name for forms
+- `DDL_AUTO` - Hibernate DDL mode (update, validate, create, create-drop)
+- `SHOW_SQL` - Show SQL queries in logs (true/false)
 
 ## Project Structure
 
@@ -185,6 +193,8 @@ idverse/
 ├── docker-compose.yml                    # Service orchestration
 ├── .env                                  # Environment variables (gitignored)
 ├── .env.example                          # Environment template
+├── data/                                 # H2 file database storage (gitignored)
+├── QUICKSTART.md                         # Quick start guide
 ├── CLAUDE.md                             # This file
 ├── DOCKER.md                             # Docker deployment guide
 └── README.md                             # Project documentation
@@ -198,21 +208,117 @@ idverse/
 - **Local Database:** H2 in-memory (default)
 - **Production Database:** MySQL 8.0 (Docker)
 
-## Database Profiles
+## Database Configuration Strategy
 
-### Default Profile (Development)
+### Profile Hierarchy
+
+The application uses a dual-configuration approach for maximum flexibility:
+
+1. **Environment Variable:** `DATABASE_TYPE` (default: `h2-memory`)
+2. **Spring Profile:** `--spring.profiles.active` (overrides env var)
+
+**Priority:** Spring Profile > Environment Variable > Default
+
+### Available Database Configurations
+
+| Profile | Environment | Database | Persistence | Use Case |
+|---------|-------------|----------|-------------|----------|
+| `default` | `DATABASE_TYPE=h2-memory` | H2 in-memory | ❌ No | Quick development/testing |
+| `h2-file` | `DATABASE_TYPE=h2-file` | H2 file-based | ✅ Yes (`./data/`) | Local development |
+| `docker` | `DATABASE_TYPE=docker` | MySQL 8.0 | ✅ Yes (volume) | Production deployment |
+
+### Profile Details
+
+#### Default Profile (H2 In-Memory)
 - **Driver:** H2 Database
 - **URL:** `jdbc:h2:mem:testdb`
 - **Console:** http://localhost:19746/h2-console
+- **Credentials:** sa / sa
 - **Auto-schema:** `update`
-- **Persistence:** In-memory (data lost on restart)
+- **Persistence:** No (data lost on restart)
+- **Best for:** Quick testing, CI/CD, ephemeral environments
 
-### Docker Profile (Production)
+#### H2 File Profile (H2 Persistent)
+- **Driver:** H2 Database
+- **URL:** `jdbc:h2:file:./data/idverse`
+- **Console:** http://localhost:19746/h2-console
+- **Credentials:** sa / sa
+- **Auto-schema:** `update`
+- **Persistence:** Yes (file: `./data/idverse.mv.db`)
+- **Best for:** Local development with data retention
+
+**Activation:**
+```bash
+# Via environment variable
+export DATABASE_TYPE=h2-file
+mvn spring-boot:run
+
+# Via Spring profile (overrides env var)
+mvn spring-boot:run -Dspring-boot.run.profiles=h2-file
+```
+
+#### Docker Profile (MySQL Production)
 - **Driver:** MySQL 8.0
 - **URL:** `jdbc:mysql://mysql:3306/idverse`
+- **Credentials:** Configured via environment variables
 - **Auto-schema:** `update` (configurable via DDL_AUTO env var)
-- **Persistence:** Permanent via Docker volume
-- **Connection Pool:** HikariCP (max 10 connections)
+- **Persistence:** Permanent via Docker volume `mysql_data`
+- **Connection Pool:** HikariCP (max 10 connections, min 5 idle)
+- **Best for:** Production, staging, Docker deployments
+
+**Activation:**
+```bash
+# Automatically activated in Docker Compose via SPRING_PROFILES_ACTIVE=docker
+docker-compose up -d
+```
+
+## Architectural Decisions
+
+### Database Configuration Design
+
+**Decision:** Dual-configuration approach (Environment Variable + Spring Profiles)
+
+**Rationale:**
+- **Environment Variable (`DATABASE_TYPE`)** - Simple, works across all environments, no command-line flags needed
+- **Spring Profile Override** - Power users can explicitly control database selection
+- **Hierarchy** - Clear precedence (Profile > Env Var > Default) prevents ambiguity
+
+**Benefits:**
+1. **Developer Flexibility** - Quick switching without editing config files
+2. **CI/CD Friendly** - Environment variables integrate easily with pipelines
+3. **Docker Native** - Profiles automatically activated in containerized environments
+4. **Explicit Control** - Profiles override when precision matters
+5. **Safe Defaults** - H2 in-memory prevents accidental data persistence in tests
+
+**Implementation:**
+```yaml
+# application.yml
+spring:
+  profiles:
+    active: ${DATABASE_TYPE:default}
+```
+
+**Files:**
+- `application.yml` - Default profile (H2 in-memory) + env var activation
+- `application-h2-file.yml` - File-based H2 configuration
+- `application-docker.yml` - MySQL configuration for Docker
+
+### H2 File Storage Location
+
+**Decision:** Store H2 database files in `./data/` directory
+
+**Rationale:**
+- **Visibility** - Easy to find and backup
+- **Gitignored** - Won't be accidentally committed
+- **Project-scoped** - Keeps data with the project
+- **Easy cleanup** - `rm -rf data/` to reset
+
+**File Structure:**
+```
+data/
+├── idverse.mv.db          # H2 database file
+└── idverse.trace.db       # H2 trace file (if enabled)
+```
 
 ## Key Features & Architectural Decisions
 
@@ -280,6 +386,59 @@ idverse/
 
 ## Common Development Tasks
 
+### Switching Databases
+
+**Quick switch via environment variable:**
+```bash
+# H2 in-memory (default)
+mvn spring-boot:run
+
+# H2 file-based (persistent)
+export DATABASE_TYPE=h2-file
+mvn spring-boot:run
+
+# MySQL (use Docker Compose)
+docker-compose up -d
+```
+
+**Explicit profile override:**
+```bash
+# Override environment variable with profile
+mvn spring-boot:run -Dspring-boot.run.profiles=h2-file
+
+# Multiple profiles
+mvn spring-boot:run -Dspring-boot.run.profiles=h2-file,debug
+```
+
+### Accessing H2 Console
+
+**H2 In-Memory:**
+- URL: http://localhost:19746/h2-console
+- JDBC URL: `jdbc:h2:mem:testdb`
+- Username: `sa`
+- Password: `sa`
+
+**H2 File-Based:**
+- URL: http://localhost:19746/h2-console
+- JDBC URL: `jdbc:h2:file:./data/idverse`
+- Username: `sa`
+- Password: `sa`
+
+### Resetting Database
+
+**H2 In-Memory:** Restart application
+
+**H2 File-Based:**
+```bash
+rm -rf data/
+```
+
+**MySQL (Docker):**
+```bash
+docker-compose down -v  # WARNING: Deletes all data
+docker-compose up -d
+```
+
 ### Adding a New Endpoint
 1. Create controller method with appropriate mapping
 2. Add service layer logic if needed
@@ -297,6 +456,13 @@ idverse/
 1. Modify JPA entity classes
 2. Run application (DDL auto-update will apply changes)
 3. For production: create migration scripts instead of relying on auto-update
+
+### Creating a New Database Profile
+1. Create `application-{profile}.yml` in `src/main/resources/`
+2. Configure datasource, JPA, and other settings
+3. Document in CLAUDE.md
+4. Add to `DATABASE_TYPE` options in `.env.example`
+5. Update QUICKSTART.md with usage example
 
 ### Troubleshooting
 

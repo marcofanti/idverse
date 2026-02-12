@@ -45,5 +45,8 @@ Curl.txt
 logs/
 *.log
 
+### Database ###
+data/
+
 ### Claude Code ###
 .claude/
