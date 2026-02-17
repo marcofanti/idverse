@@ -100,11 +100,13 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- IDVerse API Client Library -->
+        <!-- IDVerse API Client Library (local JAR) -->
         <dependency>
             <groupId>org.itnaf</groupId>
             <artifactId>idverse-api</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/idverse-api-1.0-SNAPSHOT.jar</systemPath>
         </dependency>
 
         <!-- Spring Boot Test -->
