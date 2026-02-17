@@ -2,8 +2,8 @@ package org.itnaf.idverse.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.itnaf.idverse.model.OAuthTokenResponse;
-import org.itnaf.idverse.service.OAuthTokenService;
+import org.itnaf.idverse.client.model.OAuthTokenResponse;
+import org.itnaf.idverse.client.service.OAuthTokenService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

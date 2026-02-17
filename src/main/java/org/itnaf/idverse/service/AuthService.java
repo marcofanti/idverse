@@ -2,6 +2,7 @@ package org.itnaf.idverse.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.itnaf.idverse.client.service.JwtService;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;

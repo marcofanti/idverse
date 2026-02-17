@@ -5,7 +5,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.itnaf.idverse.model.VerificationRequest;
+import org.itnaf.idverse.client.model.VerificationRequest;
 import org.itnaf.idverse.model.VerificationResponse;
 import org.itnaf.idverse.service.AuthService;
 import org.itnaf.idverse.service.IdVerificationService;
