@@ -20,13 +20,9 @@ This project is split across two repositories:
 | Repo | Path | Purpose |
 |------|------|---------|
 | `idverse` | `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse` | Web application (this repo) |
-| `idverse-api` | `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse-api` | API client library |
+| `idverse-api` | `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse-api` | API client library source |
 
-The `idverse-api` library must be built and installed to the local Maven repository before building this app:
-```bash
-cd ../idverse-api && mvn clean install -DskipTests
-cd ../idverse && mvn spring-boot:run
-```
+The `idverse-api` library is bundled as a pre-built JAR in `lib/idverse-api-1.0-SNAPSHOT.jar` (committed to this repo). No separate build step is required — Maven resolves it via a `system`-scoped dependency pointing to that file.
 
 ## Technology Stack
 
@@ -36,7 +32,7 @@ cd ../idverse && mvn spring-boot:run
 - **Spring Boot Starter Thymeleaf** - Template engine for web UI
 - **Spring Boot Starter WebFlux** - WebClient for external API calls (via idverse-api)
 - **Spring Boot Starter Validation** - Request validation
-- **idverse-api (1.0-SNAPSHOT)** - IDVerse API client library (local dependency)
+- **idverse-api (1.0-SNAPSHOT)** - IDVerse API client library (`lib/idverse-api-1.0-SNAPSHOT.jar`, system-scoped)
 
 ### Database Support
 - **H2 Database** - In-memory database (default/development profile)
@@ -53,9 +49,6 @@ cd ../idverse && mvn spring-boot:run
 ## Build Commands
 
 ```bash
-# Build the idverse-api library first (required once, or after library changes)
-cd ../idverse-api && mvn clean install -DskipTests && cd ../idverse
-
 # Build the project
 mvn clean install
 
@@ -211,6 +204,8 @@ idverse/
 ├── pom.xml                              # Maven configuration
 ├── Dockerfile                           # Application container image
 ├── docker-compose.yml                   # Service orchestration
+├── lib/
+│   └── idverse-api-1.0-SNAPSHOT.jar    # Pre-built API client library (committed)
 ├── .env                                 # Environment variables (gitignored)
 ├── .env.example                         # Environment template
 ├── data/                                # H2 file database storage (gitignored)
@@ -335,11 +330,14 @@ docker-compose up -d
 
 **Why sub-package (`org.itnaf.idverse.client`):**  Spring Boot scans `org.itnaf.idverse` and all sub-packages, so `@Service` beans in the library are discovered automatically. No auto-configuration file or `@ComponentScan` change needed in this app.
 
-**Rebuilding after library changes:**
-```bash
-cd ../idverse-api && mvn clean install -DskipTests
-# Then restart/rebuild this app normally
-```
+**Updating the library JAR:**
+
+If the `idverse-api` source is changed and a new JAR is produced:
+1. Copy the new JAR to `lib/idverse-api-1.0-SNAPSHOT.jar` (overwrite)
+2. Commit the updated JAR to git
+3. Rebuild this app normally (`mvn spring-boot:run`)
+
+No `mvn install` to the local Maven repository is needed.
 
 ### Database Configuration Design
 
@@ -508,25 +506,30 @@ docker-compose up -d
 
 ### Working with the API Client Library
 
-**Library location:** `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse-api`
+**Library JAR:** `lib/idverse-api-1.0-SNAPSHOT.jar` (committed to this repo)
 
-**After modifying the library:**
+**Source repo:** `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse-api`
+
+**After modifying the library source:**
 ```bash
 cd ../idverse-api
-mvn clean install -DskipTests   # installs to ~/.m2/repository
+mvn clean package -DskipTests          # builds target/idverse-api-1.0-SNAPSHOT.jar
+cp target/idverse-api-1.0-SNAPSHOT.jar ../idverse/lib/
 cd ../idverse
-mvn spring-boot:run             # picks up the new library JAR
+git add lib/idverse-api-1.0-SNAPSHOT.jar
+git commit -m "Update idverse-api library JAR"
+mvn spring-boot:run                    # picks up the updated JAR
 ```
 
 **Adding a field to `VerificationRequest`:**
 1. Edit `VerificationRequest.java` in `idverse-api`
 2. Update `IdVerseApiClient.sendVerification()` to include the field in the request body
-3. Rebuild and reinstall the library
+3. Rebuild the library, copy the JAR to `lib/`, and commit it
 4. Update callers in this app (controllers, tests) if needed
 
 **Adding a new API operation:**
 1. Create a new method in `IdVerseApiClient` (in `idverse-api`)
-2. Rebuild and reinstall the library
+2. Rebuild the library, copy the JAR to `lib/`, and commit it
 3. Call the new method from `IdVerificationService` (or a new service) in this app
 
 ### Adding a New Endpoint
