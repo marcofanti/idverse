@@ -13,21 +13,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Framework:** Spring Boot 3.2.1
 - **Port:** 19746
 
+### Multi-Repo Structure
+
+This project is split across two repositories:
+
+| Repo | Path | Purpose |
+|------|------|---------|
+| `idverse` | `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse` | Web application (this repo) |
+| `idverse-api` | `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse-api` | API client library |
+
+The `idverse-api` library must be built and installed to the local Maven repository before building this app:
+```bash
+cd ../idverse-api && mvn clean install -DskipTests
+cd ../idverse && mvn spring-boot:run
+```
+
 ## Technology Stack
 
 ### Core Dependencies
 - **Spring Boot Starter Web** - REST API and web UI
 - **Spring Boot Starter Data JPA** - Database persistence
 - **Spring Boot Starter Thymeleaf** - Template engine for web UI
-- **Spring Boot Starter WebFlux** - WebClient for external API calls
+- **Spring Boot Starter WebFlux** - WebClient for external API calls (via idverse-api)
 - **Spring Boot Starter Validation** - Request validation
+- **idverse-api (1.0-SNAPSHOT)** - IDVerse API client library (local dependency)
 
 ### Database Support
 - **H2 Database** - In-memory database (default/development profile)
 - **MySQL Connector** - Production database (docker profile)
 
 ### Security & Authentication
-- **JWT (jjwt 0.12.3)** - JSON Web Token implementation for webhook authentication
+- **JWT (jjwt 0.12.3)** - JSON Web Token implementation for webhook authentication (via idverse-api)
 - Custom session-based authentication with AUTH_KEY
 
 ### Utilities
@@ -37,6 +53,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build Commands
 
 ```bash
+# Build the idverse-api library first (required once, or after library changes)
+cd ../idverse-api && mvn clean install -DskipTests && cd ../idverse
+
 # Build the project
 mvn clean install
 
@@ -154,51 +173,71 @@ The `.env` file configures both application and Docker deployment:
 
 ## Project Structure
 
-Standard Maven layout with Spring Boot organization:
+### This repo (`idverse`) — Web Application
 
 ```
 idverse/
 ├── src/main/java/org/itnaf/idverse/
 │   ├── IdverseApplication.java          # Main Spring Boot application
 │   ├── config/
-│   │   └── ApiConfig.java                # Configuration (loads .env)
+│   │   └── ApiConfig.java               # Config beans (loads .env, provides
+│   │                                    #   String beans consumed by idverse-api)
 │   ├── controller/
-│   │   ├── ApiController.java            # REST API endpoints
-│   │   ├── WebController.java            # Web UI controller
-│   │   ├── OAuthTestController.java      # OAuth testing endpoints
-│   │   └── WebhookController.java        # Webhook receiver
+│   │   ├── ApiController.java           # REST API endpoints
+│   │   ├── WebController.java           # Web UI controller
+│   │   ├── OAuthTestController.java     # OAuth testing endpoints
+│   │   ├── WebhookController.java       # Webhook receiver
+│   │   ├── MockOAuthController.java     # Mock OAuth endpoint
+│   │   └── AuthController.java         # Auth key endpoint
 │   ├── service/
-│   │   ├── IdVerificationService.java    # Verification logic
-│   │   ├── OAuthTokenService.java        # OAuth token management (caching)
-│   │   └── SessionService.java           # Session management
+│   │   ├── IdVerificationService.java   # Orchestrates API call + DB persistence
+│   │   ├── AuthService.java            # Session key management
+│   │   └── SessionService.java         # Session management
 │   ├── model/
-│   │   ├── VerificationRequest.java      # Request DTO
-│   │   ├── VerificationResponse.java     # Response DTO
-│   │   ├── VerificationRecord.java       # JPA Entity
-│   │   └── OAuthTokenResponse.java       # OAuth response DTO
+│   │   ├── VerificationResponse.java   # Response DTO (includes DB fields)
+│   │   └── VerificationRecord.java     # JPA Entity
 │   └── repository/
-│       └── VerificationRepository.java   # Spring Data JPA repository
+│       └── VerificationRepository.java  # Spring Data JPA repository
 ├── src/main/resources/
-│   ├── application.yml                   # Default configuration (H2)
-│   ├── application-docker.yml            # Docker profile (MySQL)
-│   ├── templates/                        # Thymeleaf templates
-│   └── static/                           # Static assets
-├── src/test/java/                        # Test sources
-├── docker/                               # Docker-related files
+│   ├── application.yml                  # Default configuration (H2)
+│   ├── application-docker.yml           # Docker profile (MySQL)
+│   ├── templates/                       # Thymeleaf templates
+│   └── static/                          # Static assets
+├── src/test/java/                       # Test sources
+├── docker/                              # Docker-related files
 │   └── mysql/
-│       ├── conf.d/                       # Custom MySQL config
-│       └── init/                         # DB initialization scripts
-├── pom.xml                               # Maven configuration
-├── Dockerfile                            # Application container image
-├── docker-compose.yml                    # Service orchestration
-├── .env                                  # Environment variables (gitignored)
-├── .env.example                          # Environment template
-├── data/                                 # H2 file database storage (gitignored)
-├── QUICKSTART.md                         # Quick start guide
-├── CLAUDE.md                             # This file
-├── DOCKER.md                             # Docker deployment guide
-└── README.md                             # Project documentation
+│       ├── conf.d/                      # Custom MySQL config
+│       └── init/                        # DB initialization scripts
+├── pom.xml                              # Maven configuration
+├── Dockerfile                           # Application container image
+├── docker-compose.yml                   # Service orchestration
+├── .env                                 # Environment variables (gitignored)
+├── .env.example                         # Environment template
+├── data/                                # H2 file database storage (gitignored)
+├── QUICKSTART.md                        # Quick start guide
+├── CLAUDE.md                            # This file
+├── DOCKER.md                            # Docker deployment guide
+└── README.md                            # Project documentation
 ```
+
+### Sibling repo (`idverse-api`) — API Client Library
+
+```
+idverse-api/
+└── src/main/java/org/itnaf/idverse/client/
+    ├── IdVerseApiClient.java            # HTTP client for IDVerse API
+    ├── model/
+    │   ├── VerificationRequest.java     # API request DTO
+    │   ├── OAuthTokenResponse.java      # OAuth token response DTO
+    │   └── WebhookPayload.java          # Incoming webhook payload DTO
+    └── service/
+        ├── OAuthTokenService.java       # OAuth token management (caching)
+        └── JwtService.java              # JWT generation/validation
+```
+
+**Package:** `org.itnaf.idverse.client` — a sub-package of the app's base package, so Spring Boot's component scan picks up `@Service` beans from the library automatically without any extra configuration.
+
+**Dependency wiring:** The library's services are injected with String beans (`idverseClientId`, `idverseOAuthUrl`, etc.) that are defined as `@Bean` methods in the app's `ApiConfig.java`.
 
 ## Development Environment
 
@@ -273,6 +312,34 @@ docker-compose up -d
 ```
 
 ## Architectural Decisions
+
+### API Client Library Separation
+
+**Decision:** Extract IDVerse HTTP client code into a separate `idverse-api` Maven library.
+
+**Repo:** https://github.com/marcofanti/idverse-api
+
+**What's in the library (`org.itnaf.idverse.client`):**
+- `IdVerseApiClient` — single entry point; sends the SMS verification HTTP POST
+- `OAuthTokenService` — OAuth token fetching with 800-second cache
+- `JwtService` — JWT generation/validation for webhook auth
+- `model/VerificationRequest` — API request DTO
+- `model/OAuthTokenResponse` — OAuth response DTO
+- `model/WebhookPayload` — incoming webhook payload DTO
+
+**What stays in this app:**
+- `IdVerificationService` — calls `IdVerseApiClient`, persists result to DB
+- `VerificationRecord` — JPA entity (DB-specific)
+- `VerificationResponse` — response DTO including DB-generated `id` and `timestamp`
+- All controllers, config, Thymeleaf templates
+
+**Why sub-package (`org.itnaf.idverse.client`):**  Spring Boot scans `org.itnaf.idverse` and all sub-packages, so `@Service` beans in the library are discovered automatically. No auto-configuration file or `@ComponentScan` change needed in this app.
+
+**Rebuilding after library changes:**
+```bash
+cd ../idverse-api && mvn clean install -DskipTests
+# Then restart/rebuild this app normally
+```
 
 ### Database Configuration Design
 
@@ -438,6 +505,29 @@ rm -rf data/
 docker-compose down -v  # WARNING: Deletes all data
 docker-compose up -d
 ```
+
+### Working with the API Client Library
+
+**Library location:** `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse-api`
+
+**After modifying the library:**
+```bash
+cd ../idverse-api
+mvn clean install -DskipTests   # installs to ~/.m2/repository
+cd ../idverse
+mvn spring-boot:run             # picks up the new library JAR
+```
+
+**Adding a field to `VerificationRequest`:**
+1. Edit `VerificationRequest.java` in `idverse-api`
+2. Update `IdVerseApiClient.sendVerification()` to include the field in the request body
+3. Rebuild and reinstall the library
+4. Update callers in this app (controllers, tests) if needed
+
+**Adding a new API operation:**
+1. Create a new method in `IdVerseApiClient` (in `idverse-api`)
+2. Rebuild and reinstall the library
+3. Call the new method from `IdVerificationService` (or a new service) in this app
 
 ### Adding a New Endpoint
 1. Create controller method with appropriate mapping
