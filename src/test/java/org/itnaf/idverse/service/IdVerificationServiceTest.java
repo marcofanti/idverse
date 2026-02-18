@@ -2,6 +2,8 @@ package org.itnaf.idverse.service;
 
 import org.itnaf.idverse.client.IdVerseApiClient;
 import org.itnaf.idverse.client.model.VerificationRequest;
+import org.itnaf.idverse.model.StatusResponse;
+import org.itnaf.idverse.model.VerificationRecord;
 import org.itnaf.idverse.model.VerificationResponse;
 import org.itnaf.idverse.repository.VerificationRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -122,6 +127,100 @@ class IdVerificationServiceTest {
         // Then
         assertEquals(customTransactionId, response.getTransactionId(),
             "Should use the provided transaction ID");
+    }
+
+    @Test
+    void getLatestStatusByReferenceId_shouldReturnStatusWhenRecordExists() {
+        // Given
+        VerificationRecord record = VerificationRecord.builder()
+                .referenceId("REF123")
+                .transactionId("txn-abc")
+                .phoneNumber("+11234567890")
+                .status("SMS SENT")
+                .timestamp(LocalDateTime.of(2026, 2, 18, 12, 0))
+                .build();
+        when(verificationRepository.findTopByReferenceIdOrderByTimestampDesc("REF123"))
+                .thenReturn(Optional.of(record));
+
+        // When
+        Optional<StatusResponse> result = idVerificationService.getLatestStatusByReferenceId("REF123");
+
+        // Then
+        assertTrue(result.isPresent());
+        assertEquals("SMS SENT", result.get().getStatus());
+        assertEquals(LocalDateTime.of(2026, 2, 18, 12, 0), result.get().getTimestamp());
+        assertNull(result.get().getErrorMessage());
+    }
+
+    @Test
+    void getLatestStatusByReferenceId_shouldReturnEmptyWhenNotFound() {
+        // Given
+        when(verificationRepository.findTopByReferenceIdOrderByTimestampDesc("UNKNOWN"))
+                .thenReturn(Optional.empty());
+
+        // When
+        Optional<StatusResponse> result = idVerificationService.getLatestStatusByReferenceId("UNKNOWN");
+
+        // Then
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    void getLatestStatusByReferenceId_shouldIncludeErrorMessageOnFailure() {
+        // Given
+        VerificationRecord record = VerificationRecord.builder()
+                .referenceId("REF-FAIL")
+                .transactionId("txn-xyz")
+                .phoneNumber("+11234567890")
+                .status("FAILURE")
+                .errorMessage("API returned HTML error page")
+                .timestamp(LocalDateTime.of(2026, 2, 18, 12, 0))
+                .build();
+        when(verificationRepository.findTopByReferenceIdOrderByTimestampDesc("REF-FAIL"))
+                .thenReturn(Optional.of(record));
+
+        // When
+        Optional<StatusResponse> result = idVerificationService.getLatestStatusByReferenceId("REF-FAIL");
+
+        // Then
+        assertTrue(result.isPresent());
+        assertEquals("FAILURE", result.get().getStatus());
+        assertEquals("API returned HTML error page", result.get().getErrorMessage());
+    }
+
+    @Test
+    void getLatestStatusByTransactionId_shouldReturnStatusWhenRecordExists() {
+        // Given
+        VerificationRecord record = VerificationRecord.builder()
+                .referenceId("REF123")
+                .transactionId("txn-1234567890-abc123")
+                .phoneNumber("+11234567890")
+                .status("SMS SENT")
+                .timestamp(LocalDateTime.of(2026, 2, 18, 12, 0))
+                .build();
+        when(verificationRepository.findTopByTransactionIdOrderByTimestampDesc("txn-1234567890-abc123"))
+                .thenReturn(Optional.of(record));
+
+        // When
+        Optional<StatusResponse> result = idVerificationService.getLatestStatusByTransactionId("txn-1234567890-abc123");
+
+        // Then
+        assertTrue(result.isPresent());
+        assertEquals("SMS SENT", result.get().getStatus());
+        assertNull(result.get().getErrorMessage());
+    }
+
+    @Test
+    void getLatestStatusByTransactionId_shouldReturnEmptyWhenNotFound() {
+        // Given
+        when(verificationRepository.findTopByTransactionIdOrderByTimestampDesc("txn-unknown"))
+                .thenReturn(Optional.empty());
+
+        // When
+        Optional<StatusResponse> result = idVerificationService.getLatestStatusByTransactionId("txn-unknown");
+
+        // Then
+        assertFalse(result.isPresent());
     }
 
     @Test
