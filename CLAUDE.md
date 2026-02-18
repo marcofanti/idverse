@@ -204,10 +204,9 @@ idverse/
 ├── pom.xml                              # Maven configuration
 ├── Dockerfile                           # Application container image
 ├── docker-compose.yml                   # Service orchestration
-├── lib/
-│   └── idverse-api-1.0-SNAPSHOT.jar    # Source JAR (copy here when updating)
 ├── local-repo/                          # Local Maven repository (committed)
 │   └── org/itnaf/idverse-api/          # Resolved by Maven via file:// URL
+├── update-lib.sh                        # Script to install updated idverse-api JAR
 ├── .env                                 # Environment variables (gitignored)
 ├── .env.example                         # Environment template
 ├── data/                                # H2 file database storage (gitignored)
@@ -338,19 +337,17 @@ docker-compose up -d
 
 If the `idverse-api` source is changed and a new JAR is produced:
 ```bash
-# 1. Copy the new JAR into lib/
-cp /path/to/idverse-api-1.0-SNAPSHOT.jar lib/
+# From idverse-api root (builds and installs into idverse/local-repo)
+./build.sh
 
-# 2. Re-install into the local Maven repository
-mvn install:install-file \
-  -Dfile=lib/idverse-api-1.0-SNAPSHOT.jar \
-  -DgroupId=org.itnaf -DartifactId=idverse-api \
-  -Dversion=1.0-SNAPSHOT -Dpackaging=jar \
-  -DlocalRepositoryPath=./local-repo
-
-# 3. Commit both lib/ and local-repo/
-git add lib/ local-repo/
+# Then from idverse root
+git add local-repo/
 git commit -m "Update idverse-api library JAR"
+```
+
+Or use `update-lib.sh` in this repo to install from any JAR:
+```bash
+./update-lib.sh [/optional/path/to/jar]
 ```
 
 ### Database Configuration Design
@@ -520,35 +517,38 @@ docker-compose up -d
 
 ### Working with the API Client Library
 
-**Library JAR:** `lib/idverse-api-1.0-SNAPSHOT.jar` (committed to this repo)
-
 **Source repo:** `/Users/mfanti/Documents/BehavioSec/IDVerse/idverse-api`
 
 **After modifying the library source:**
 ```bash
-cd ../idverse-api
-mvn clean package -DskipTests                                    # builds the JAR
-cp target/idverse-api-1.0-SNAPSHOT.jar ../idverse/lib/
+# From idverse-api: build and install into idverse/local-repo in one step
+cd ../idverse-api && ./build.sh
+
+# Then in idverse: commit and run
 cd ../idverse
-mvn install:install-file \
-  -Dfile=lib/idverse-api-1.0-SNAPSHOT.jar \
-  -DgroupId=org.itnaf -DartifactId=idverse-api \
-  -Dversion=1.0-SNAPSHOT -Dpackaging=jar \
-  -DlocalRepositoryPath=./local-repo
-git add lib/ local-repo/
+git add local-repo/
 git commit -m "Update idverse-api library JAR"
-mvn spring-boot:run                                              # picks up the updated JAR
+mvn spring-boot:run
+```
+
+**Updating from an arbitrary JAR:**
+```bash
+# From idverse root — defaults to ../idverse-api/target/
+./update-lib.sh
+
+# Or point at a specific JAR
+./update-lib.sh /path/to/idverse-api-1.0-SNAPSHOT.jar
 ```
 
 **Adding a field to `VerificationRequest`:**
 1. Edit `VerificationRequest.java` in `idverse-api`
 2. Update `IdVerseApiClient.sendVerification()` to include the field in the request body
-3. Rebuild, copy JAR to `lib/`, re-install into `local-repo/`, and commit both
+3. Run `../idverse-api/build.sh`, then commit `local-repo/` in this repo
 4. Update callers in this app (controllers, tests) if needed
 
 **Adding a new API operation:**
 1. Create a new method in `IdVerseApiClient` (in `idverse-api`)
-2. Rebuild, copy JAR to `lib/`, re-install into `local-repo/`, and commit both
+2. Run `../idverse-api/build.sh`, then commit `local-repo/` in this repo
 3. Call the new method from `IdVerificationService` (or a new service) in this app
 
 ### Adding a New Endpoint
