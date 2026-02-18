@@ -10,6 +10,8 @@ Get up and running in 5 minutes. Choose your deployment path below.
 - **Maven 3.6+** (local development)
 - **Docker + Docker Compose** (production deployment)
 
+> **No separate library build needed.** The `idverse-api` client library is bundled as `lib/idverse-api-1.0-SNAPSHOT.jar` and resolved automatically by Maven — no need to clone or build the `idverse-api` repo.
+
 ---
 
 ## Path 1: Development (Fastest)
