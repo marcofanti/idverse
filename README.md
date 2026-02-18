@@ -570,8 +570,8 @@ idverse/
 │   └── mysql/
 │       ├── conf.d/                       # Custom MySQL config
 │       └── init/                         # DB initialization scripts
-├── lib/
-│   └── idverse-api-1.0-SNAPSHOT.jar     # Pre-built API client library (committed)
+├── local-repo/                           # Local Maven repository (committed)
+│   └── org/itnaf/idverse-api/           # idverse-api JAR resolved via file:// URL
 ├── pom.xml                               # Maven configuration
 ├── Dockerfile                            # Application container image
 ├── docker-compose.yml                    # Service orchestration
@@ -590,7 +590,7 @@ idverse/
 - **Database:** H2 (dev) / MySQL 8.0 (prod)
 - **Template Engine:** Thymeleaf
 - **HTTP Client:** WebFlux WebClient (via `idverse-api`)
-- **API Client:** `idverse-api` library — bundled as `lib/idverse-api-1.0-SNAPSHOT.jar`
+- **API Client:** `idverse-api` library — resolved from `local-repo/` via `file://` Maven repository
 - **Security:** JWT (jjwt 0.12.3), Session-based auth
 - **Build Tool:** Maven
 - **Container:** Docker + Docker Compose
