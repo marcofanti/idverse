@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.itnaf.idverse.client.IdVerseApiClient;
 import org.itnaf.idverse.client.model.VerificationRequest;
+import org.itnaf.idverse.model.StatusResponse;
 import org.itnaf.idverse.model.VerificationRecord;
 import org.itnaf.idverse.model.VerificationResponse;
 import org.itnaf.idverse.repository.VerificationRepository;
@@ -80,6 +81,24 @@ public class IdVerificationService {
     public Optional<VerificationResponse> getVerificationById(Long id) {
         return verificationRepository.findById(id)
                 .map(this::mapToResponse);
+    }
+
+    public Optional<StatusResponse> getLatestStatusByReferenceId(String referenceId) {
+        return verificationRepository.findTopByReferenceIdOrderByTimestampDesc(referenceId)
+                .map(this::mapToStatusResponse);
+    }
+
+    public Optional<StatusResponse> getLatestStatusByTransactionId(String transactionId) {
+        return verificationRepository.findTopByTransactionIdOrderByTimestampDesc(transactionId)
+                .map(this::mapToStatusResponse);
+    }
+
+    private StatusResponse mapToStatusResponse(VerificationRecord record) {
+        return StatusResponse.builder()
+                .status(record.getStatus())
+                .timestamp(record.getTimestamp())
+                .errorMessage(record.getErrorMessage())
+                .build();
     }
 
     private VerificationResponse mapToResponse(VerificationRecord record) {

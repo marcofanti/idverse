@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.itnaf.idverse.client.model.VerificationRequest;
+import org.itnaf.idverse.model.StatusResponse;
 import org.itnaf.idverse.model.VerificationResponse;
 import org.itnaf.idverse.service.IdVerificationService;
 import org.springframework.http.HttpStatus;
@@ -56,6 +57,22 @@ public class ApiController {
         log.info("Fetching verification by ID: {}", id);
 
         return verificationService.getVerificationById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/status/reference/{referenceId}")
+    public ResponseEntity<StatusResponse> getStatusByReferenceId(@PathVariable String referenceId) {
+        log.info("Fetching latest status for referenceId: {}", referenceId);
+        return verificationService.getLatestStatusByReferenceId(referenceId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/status/transaction/{transactionId}")
+    public ResponseEntity<StatusResponse> getStatusByTransactionId(@PathVariable String transactionId) {
+        log.info("Fetching latest status for transactionId: {}", transactionId);
+        return verificationService.getLatestStatusByTransactionId(transactionId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

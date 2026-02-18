@@ -174,6 +174,33 @@ Expected response:
 {"status":"SUCCESS","message":"Configuration is valid..."}
 ```
 
+## Key API Endpoints
+
+### Submit a verification
+```bash
+curl -X POST http://localhost:19746/api/verify \
+  -H "Content-Type: application/json" \
+  -d '{"phoneNumber": "+1234567890", "referenceId": "REF123"}'
+```
+
+### Check latest status
+```bash
+# By reference ID
+curl http://localhost:19746/api/status/reference/REF123
+
+# By transaction ID
+curl http://localhost:19746/api/status/transaction/txn-1234567890-abc123
+```
+
+**Status response:**
+```json
+{"status": "SMS SENT", "timestamp": "2026-02-18T12:00:00", "errorMessage": null}
+```
+
+Returns **404** if no record is found for the given ID.
+
+📖 **Full API reference:** [README.md](README.md#api-endpoints)
+
 ---
 
 ## Next Steps

@@ -412,7 +412,27 @@ docker-compose exec mysql mysql -u idverse_user -p
 |--------|----------|-------------|
 | POST | `/api/verify` | Submit a verification request |
 | GET | `/api/verifications` | Get all verification records |
-| GET | `/api/verifications/{id}` | Get specific verification by ID |
+| GET | `/api/verifications/{id}` | Get specific verification by DB ID |
+
+### Status API
+
+Returns the latest status for a given reference or transaction ID. No authentication required.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/status/reference/{referenceId}` | Latest status by reference ID |
+| GET | `/api/status/transaction/{transactionId}` | Latest status by transaction ID |
+
+**Response (200 OK):**
+```json
+{
+  "status": "SMS SENT",
+  "timestamp": "2026-02-18T12:00:00",
+  "errorMessage": null
+}
+```
+
+**Response (404 Not Found):** returned when no record exists for the given ID.
 
 ### Webhook API
 

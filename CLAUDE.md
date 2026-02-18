@@ -435,6 +435,12 @@ data/
 ### Mock OAuth
 - `POST /api/3.5/oauthToken` - Mock OAuth endpoint (returns OAUTHTOKEN from .env)
 
+### Status API
+- `GET /api/status/reference/{referenceId}` - Latest status for a reference ID (no auth)
+- `GET /api/status/transaction/{transactionId}` - Latest status for a transaction ID (no auth)
+
+Response shape: `{ status, timestamp, errorMessage }` — 404 if not found.
+
 ## Security Considerations
 
 ### Docker Security
