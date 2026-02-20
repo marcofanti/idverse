@@ -435,6 +435,11 @@ data/
 ### Mock OAuth
 - `POST /api/3.5/oauthToken` - Mock OAuth endpoint (returns OAUTHTOKEN from .env)
 
+### Update Status Endpoint
+- `POST /api/updateStatus` — update status by transactionId, no auth required
+- Body: `{ transactionId, event?, status? }` — `event` (camelCase) takes precedence over `status`; at least one required
+- Same lookup + create-new-record logic as the webhook; works even if transactionId not found
+
 ### Verify Test Endpoint
 - `POST /api/verify/test?dryRun=true` - Dry run: skips real API call, saves mock record (no auth)
 - `POST /api/verify/test?dryRun=false` - Real call via the test endpoint, same as `/api/verify` (no auth)

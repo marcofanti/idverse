@@ -433,6 +433,34 @@ The response always includes a `dryRun` field indicating the mode used:
 }
 ```
 
+### Update Status API
+
+Unauthenticated endpoint to update a record's status by transaction ID. Mirrors the webhook logic without requiring a JWT token — intended for testing and internal tooling.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/updateStatus` | Update status for a given transaction ID |
+
+**Request body:**
+```json
+{ "transactionId": "txn-...", "event": "completedPass" }
+```
+- `transactionId` — required
+- `event` — IDVerse camelCase event name (e.g. `pending`, `liveness`, `completedPass`). Takes precedence over `status` if both provided.
+- `status` — explicit uppercase status string (e.g. `COMPLETED PASS`). Used only when `event` is absent.
+
+At least one of `event` or `status` must be provided.
+
+**Response (200 OK):**
+```json
+{
+  "status": "success",
+  "transactionId": "txn-...",
+  "resolvedStatus": "COMPLETED PASS",
+  "recordId": "5"
+}
+```
+
 ### Status API
 
 Returns the latest status for a given reference or transaction ID. No authentication required.

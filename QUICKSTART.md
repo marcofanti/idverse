@@ -191,6 +191,14 @@ curl -X POST "http://localhost:19746/api/verify/test?dryRun=true" \
 ```
 Saves the record with a mock response — no SMS sent. Use `dryRun=false` (or omit) to make the real call.
 
+### Update status (no JWT required)
+```bash
+curl -X POST http://localhost:19746/api/updateStatus \
+  -H "Content-Type: application/json" \
+  -d '{"transactionId": "txn-example-0000001", "event": "completedPass"}'
+```
+Use `event` (camelCase IDVerse name) or `status` (explicit uppercase string), or both — `event` takes precedence.
+
 ### Check latest status
 ```bash
 # By reference ID
