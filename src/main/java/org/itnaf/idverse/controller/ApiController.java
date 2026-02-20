@@ -61,6 +61,28 @@ public class ApiController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/verify/test")
+    public ResponseEntity<Map<String, String>> verifyTest(
+            @Valid @RequestBody VerificationRequest request,
+            @RequestParam(defaultValue = "false") boolean dryRun) {
+        log.info("Received test verification request (dryRun={}): {}", dryRun, request);
+
+        VerificationResponse response = verificationService.verify(request, dryRun);
+
+        Map<String, String> result = new HashMap<>();
+        result.put("dryRun", String.valueOf(dryRun));
+
+        if ("SMS SENT".equals(response.getStatus())) {
+            result.put("status", "success");
+            result.put("transactionId", response.getTransactionId());
+            return ResponseEntity.ok(result);
+        } else {
+            result.put("status", "error");
+            result.put("message", response.getErrorMessage() != null ? response.getErrorMessage() : "Verification failed");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+    }
+
     @GetMapping("/status/reference/{referenceId}")
     public ResponseEntity<StatusResponse> getStatusByReferenceId(@PathVariable String referenceId) {
         log.info("Fetching latest status for referenceId: {}", referenceId);

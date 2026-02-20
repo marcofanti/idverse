@@ -24,7 +24,11 @@ public class IdVerificationService {
     private final IdVerseApiClient idVerseApiClient;
 
     public VerificationResponse verify(VerificationRequest request) {
-        log.info("=== Starting Verification Process ===");
+        return verify(request, false);
+    }
+
+    public VerificationResponse verify(VerificationRequest request, boolean dryRun) {
+        log.info("=== Starting Verification Process (dryRun={}) ===", dryRun);
         log.info("Phone Code: {}", request.getPhoneCode());
         log.info("Phone Number: {}", request.getPhoneNumber());
         log.info("Reference ID: {}", request.getReferenceId());
@@ -44,23 +48,29 @@ public class IdVerificationService {
                 .transactionId(request.getTransactionId())
                 .build();
 
-        try {
-            log.debug("Calling external IDVerse API...");
-            String apiResponse = idVerseApiClient.sendVerification(request);
-
-            record.setApiResponse(apiResponse);
+        if (dryRun) {
+            log.info("DRY RUN — skipping external IDVerse API call");
+            record.setApiResponse("{\"mock\":true,\"status\":\"success\"}");
             record.setStatus("SMS SENT");
+        } else {
+            try {
+                log.debug("Calling external IDVerse API...");
+                String apiResponse = idVerseApiClient.sendVerification(request);
 
-            log.info("✓ Verification successful for reference: {}", request.getReferenceId());
-            log.debug("API Response received: {}", apiResponse);
+                record.setApiResponse(apiResponse);
+                record.setStatus("SMS SENT");
 
-        } catch (Exception e) {
-            log.error("✗ Verification failed for reference: {}", request.getReferenceId());
-            log.error("Error details: {}", e.getMessage(), e);
+                log.info("✓ Verification successful for reference: {}", request.getReferenceId());
+                log.debug("API Response received: {}", apiResponse);
 
-            record.setApiResponse(null);
-            record.setStatus("FAILURE");
-            record.setErrorMessage(e.getMessage());
+            } catch (Exception e) {
+                log.error("✗ Verification failed for reference: {}", request.getReferenceId());
+                log.error("Error details: {}", e.getMessage(), e);
+
+                record.setApiResponse(null);
+                record.setStatus("FAILURE");
+                record.setErrorMessage(e.getMessage());
+            }
         }
 
         log.debug("Saving verification record to database...");

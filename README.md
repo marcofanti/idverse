@@ -411,8 +411,27 @@ docker-compose exec mysql mysql -u idverse_user -p
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/verify` | Submit a verification request |
+| POST | `/api/verify/test?dryRun=true\|false` | Test endpoint — real or mock call (see below) |
 | GET | `/api/verifications` | Get all verification records |
 | GET | `/api/verifications/{id}` | Get specific verification by DB ID |
+
+#### Test Endpoint (`POST /api/verify/test`)
+
+Accepts the same request body as `/api/verify` with an optional `dryRun` query parameter:
+
+| `dryRun` | Behaviour |
+|----------|-----------|
+| `true` | Skips the real IDVerse API call; saves a record with `{"mock":true,"status":"success"}` and status `SMS SENT` |
+| `false` (default) | Makes the real API call — identical to `/api/verify` |
+
+The response always includes a `dryRun` field indicating the mode used:
+```json
+{
+  "status": "success",
+  "dryRun": "true",
+  "transactionId": "txn-1234567890-abc123"
+}
+```
 
 ### Status API
 

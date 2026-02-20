@@ -180,8 +180,16 @@ Expected response:
 ```bash
 curl -X POST http://localhost:19746/api/verify \
   -H "Content-Type: application/json" \
-  -d '{"phoneNumber": "+1234567890", "referenceId": "REF123"}'
+  -d '{"phoneCode": "+1", "phoneNumber": "9412607454", "referenceId": "REF123"}'
 ```
+
+### Test without calling the real API (dry run)
+```bash
+curl -X POST "http://localhost:19746/api/verify/test?dryRun=true" \
+  -H "Content-Type: application/json" \
+  -d '{"phoneCode": "+1", "phoneNumber": "9412607454", "referenceId": "REF123"}'
+```
+Saves the record with a mock response — no SMS sent. Use `dryRun=false` (or omit) to make the real call.
 
 ### Check latest status
 ```bash

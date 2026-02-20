@@ -435,6 +435,12 @@ data/
 ### Mock OAuth
 - `POST /api/3.5/oauthToken` - Mock OAuth endpoint (returns OAUTHTOKEN from .env)
 
+### Verify Test Endpoint
+- `POST /api/verify/test?dryRun=true` - Dry run: skips real API call, saves mock record (no auth)
+- `POST /api/verify/test?dryRun=false` - Real call via the test endpoint, same as `/api/verify` (no auth)
+
+Same request body as `/api/verify`. Response includes `dryRun`, `status`, and `transactionId`.
+
 ### Status API
 - `GET /api/status/reference/{referenceId}` - Latest status for a reference ID (no auth)
 - `GET /api/status/transaction/{transactionId}` - Latest status for a transaction ID (no auth)

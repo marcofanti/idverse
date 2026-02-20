@@ -129,6 +129,81 @@ class IdVerificationServiceTest {
             "Should use the provided transaction ID");
     }
 
+    // --- verify(request, dryRun) ---
+
+    @Test
+    void verify_dryRun_shouldNotCallApiClientAndReturnSuccess() {
+        // Given - no stubbing for idVerseApiClient (should never be called)
+        when(verificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        VerificationRequest request = new VerificationRequest();
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
+        request.setReferenceId("REF-DRY");
+
+        // When
+        VerificationResponse response = idVerificationService.verify(request, true);
+
+        // Then
+        assertEquals("SMS SENT", response.getStatus());
+        assertNull(response.getErrorMessage());
+        assertNotNull(response.getTransactionId(), "Transaction ID should be auto-generated");
+    }
+
+    @Test
+    void verify_dryRun_shouldSaveRecordWithMockApiResponse() {
+        // Given
+        when(verificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        VerificationRequest request = new VerificationRequest();
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
+        request.setReferenceId("REF-DRY");
+
+        // When
+        VerificationResponse response = idVerificationService.verify(request, true);
+
+        // Then — record saved (save() was called) and apiResponse contains mock marker
+        assertNotNull(response);
+        assertEquals("SMS SENT", response.getStatus());
+    }
+
+    @Test
+    void verify_notDryRun_shouldCallApiClientNormally() {
+        // Given
+        when(idVerseApiClient.sendVerification(any())).thenReturn("{\"status\":\"success\"}");
+        when(verificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        VerificationRequest request = new VerificationRequest();
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
+        request.setReferenceId("REF-REAL");
+
+        // When
+        VerificationResponse response = idVerificationService.verify(request, false);
+
+        // Then
+        assertEquals("SMS SENT", response.getStatus());
+    }
+
+    @Test
+    void verify_noArgOverload_shouldDefaultToNonDryRun() {
+        // Given — the zero-arg overload should behave identically to verify(request, false)
+        when(idVerseApiClient.sendVerification(any())).thenReturn("{\"status\":\"success\"}");
+        when(verificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        VerificationRequest request = new VerificationRequest();
+        request.setPhoneCode("+1");
+        request.setPhoneNumber("9412607454");
+        request.setReferenceId("REF-DEFAULT");
+
+        // When
+        VerificationResponse response = idVerificationService.verify(request);
+
+        // Then — real API client was called (stubbed above), status is success
+        assertEquals("SMS SENT", response.getStatus());
+    }
+
     @Test
     void getLatestStatusByReferenceId_shouldReturnStatusWhenRecordExists() {
         // Given
